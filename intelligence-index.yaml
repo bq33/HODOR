@@ -1,0 +1,294 @@
+# HODOR Intelligence Index
+# 
+# This file is the connective tissue of the entire repo.
+# Every threat pattern is mapped to its related artifacts so that 
+# an AI agent can trace the full chain: adversary → technique → 
+# detection → response → compliance.
+#
+# When adding a new detection rule, playbook, or threat actor profile,
+# update this file so the cross-references stay current.
+
+threats:
+
+  credential-stuffing:
+    description: >
+      Automated use of stolen username/password pairs (from breached databases)
+      to gain unauthorized access to user accounts at scale.
+    severity: critical
+    threat_actors:
+      - threat-actors/marketplace-fraud-rings.md
+      - threat-actors/scattered-spider.md
+    mitre_techniques:
+      - T1110.004  # Credential Stuffing
+      - T1078       # Valid Accounts
+    kill_chain_phase: initial-access
+    detection_rules:
+      - detections-and-controls/detection-rules/credential-stuffing-velocity.md
+      - detections-and-controls/detection-rules/impossible-travel-login.md
+      - detections-and-controls/detection-rules/breached-credential-match.md
+    controls:
+      - detections-and-controls/controls/rate-limiting.md
+      - detections-and-controls/controls/credential-breach-blocklist.md
+      - identity-and-access/authentication/mfa-strategy.md
+    playbooks:
+      - incident-response/playbooks/ato-response.md
+    trust_safety_patterns:
+      - trust-and-safety-patterns/fraud-typologies/account-takeover.md
+    postmortems:
+      - postmortems/2025-03-credential-stuffing-wave.md
+    nist_controls:
+      - PR.AC-1   # Identity management and access control
+      - PR.AC-7   # Authentication
+      - DE.CM-1   # Network monitoring
+      - DE.AE-2   # Event analysis
+    campaigns:
+      - campaigns-and-incidents/archive/2025-q1-holiday-credential-wave.md
+    kpis:
+      - metrics-and-reporting/kpis/security-kpis.md#credential-stuffing-block-rate
+      - metrics-and-reporting/kpis/security-kpis.md#ato-rate
+
+  account-takeover:
+    description: >
+      Unauthorized access to a legitimate user's account through any method
+      including credential stuffing, phishing, social engineering, session
+      hijacking, or SIM swapping.
+    severity: critical
+    threat_actors:
+      - threat-actors/marketplace-fraud-rings.md
+      - threat-actors/scattered-spider.md
+      - threat-actors/social-engineering-crews.md
+    mitre_techniques:
+      - T1078       # Valid Accounts
+      - T1556       # Modify Authentication Process
+      - T1539       # Steal Web Session Cookie
+      - T1111       # Multi-Factor Authentication Interception
+    kill_chain_phase: initial-access
+    detection_rules:
+      - detections-and-controls/detection-rules/session-anomaly.md
+      - detections-and-controls/detection-rules/account-change-velocity.md
+      - detections-and-controls/detection-rules/device-fingerprint-mismatch.md
+    controls:
+      - identity-and-access/authentication/passkeys.md
+      - identity-and-access/authentication/mfa-strategy.md
+      - identity-and-access/authentication/session-management.md
+      - detections-and-controls/controls/step-up-auth-triggers.md
+    playbooks:
+      - incident-response/playbooks/ato-response.md
+      - incident-response/playbooks/mass-ato-response.md
+    trust_safety_patterns:
+      - trust-and-safety-patterns/fraud-typologies/account-takeover.md
+    postmortems: []
+    nist_controls:
+      - PR.AC-1
+      - PR.AC-7
+      - DE.CM-1
+      - RS.RP-1   # Response plan execution
+    campaigns: []
+    kpis:
+      - metrics-and-reporting/kpis/security-kpis.md#ato-rate
+      - metrics-and-reporting/kpis/security-kpis.md#mean-time-to-detect-ato
+
+  payment-fraud:
+    description: >
+      Fraudulent transactions using stolen payment credentials, synthetic
+      identities, or manipulation of the payment flow to extract value
+      from the platform.
+    severity: critical
+    threat_actors:
+      - threat-actors/marketplace-fraud-rings.md
+      - threat-actors/carding-networks.md
+    mitre_techniques:
+      - T1657       # Financial Theft
+    kill_chain_phase: actions-on-objectives
+    detection_rules:
+      - detections-and-controls/detection-rules/payment-velocity-anomaly.md
+      - detections-and-controls/detection-rules/card-testing-pattern.md
+      - detections-and-controls/detection-rules/shipping-address-mismatch.md
+    controls:
+      - detections-and-controls/controls/transaction-risk-scoring.md
+      - detections-and-controls/controls/3ds-challenge.md
+      - identity-and-access/identity-verification/idv-for-sellers.md
+    playbooks:
+      - incident-response/playbooks/payment-fraud-response.md
+    trust_safety_patterns:
+      - trust-and-safety-patterns/fraud-typologies/payment-fraud.md
+      - trust-and-safety-patterns/fraud-typologies/card-testing.md
+    postmortems: []
+    nist_controls:
+      - PR.DS-5   # Protection against data leaks
+      - DE.CM-1
+    campaigns: []
+    kpis:
+      - metrics-and-reporting/kpis/security-kpis.md#fraud-loss-rate
+      - metrics-and-reporting/kpis/security-kpis.md#chargeback-rate
+
+  fake-accounts:
+    description: >
+      Creation of inauthentic accounts at scale for purposes including spam,
+      manipulation of marketplace metrics, promotion abuse, or establishing
+      infrastructure for future fraud.
+    severity: high
+    threat_actors:
+      - threat-actors/marketplace-fraud-rings.md
+      - threat-actors/bot-operators.md
+    mitre_techniques:
+      - T1136       # Create Account
+      - T1583.001   # Acquire Infrastructure: Domains
+    kill_chain_phase: resource-development
+    detection_rules:
+      - detections-and-controls/detection-rules/registration-velocity.md
+      - detections-and-controls/detection-rules/synthetic-identity-signals.md
+      - detections-and-controls/detection-rules/email-domain-clustering.md
+    controls:
+      - detections-and-controls/controls/registration-challenge.md
+      - identity-and-access/account-quality/scoring-model.md
+      - detections-and-controls/challenge-strategies/captcha-strategy.md
+    playbooks:
+      - incident-response/playbooks/fake-account-ring-takedown.md
+    trust_safety_patterns:
+      - trust-and-safety-patterns/fraud-typologies/fake-accounts.md
+    postmortems:
+      - postmortems/2025-01-fake-seller-ring.md
+    nist_controls:
+      - PR.AC-1
+      - DE.CM-1
+    campaigns:
+      - campaigns-and-incidents/archive/2025-q1-fake-seller-ring.md
+    kpis:
+      - metrics-and-reporting/kpis/trust-safety-kpis.md#fake-account-detection-rate
+      - metrics-and-reporting/kpis/trust-safety-kpis.md#time-to-takedown
+
+  ransomware:
+    description: >
+      Malware that encrypts organizational data and demands payment for
+      decryption keys, often preceded by data exfiltration for double
+      extortion leverage.
+    severity: critical
+    threat_actors:
+      - threat-actors/lockbit.md
+      - threat-actors/blackcat-alphv.md
+    mitre_techniques:
+      - T1486       # Data Encrypted for Impact
+      - T1490       # Inhibit System Recovery
+      - T1048       # Exfiltration Over Alternative Protocol
+      - T1021       # Remote Services
+    kill_chain_phase: actions-on-objectives
+    detection_rules:
+      - detections-and-controls/detection-rules/ransomware-file-activity.md
+      - detections-and-controls/detection-rules/lateral-movement-anomaly.md
+      - detections-and-controls/detection-rules/data-exfiltration-volume.md
+    controls:
+      - detections-and-controls/controls/network-segmentation.md
+      - detections-and-controls/controls/backup-integrity.md
+      - detections-and-controls/controls/endpoint-detection.md
+    playbooks:
+      - incident-response/playbooks/ransomware-response.md
+    trust_safety_patterns: []
+    postmortems: []
+    nist_controls:
+      - PR.IP-4    # Backups
+      - PR.PT-3    # Least functionality
+      - DE.CM-4    # Malicious code detection
+      - RS.RP-1    # Response plan execution
+      - RC.RP-1    # Recovery plan execution
+    campaigns: []
+    kpis:
+      - metrics-and-reporting/kpis/security-kpis.md#mean-time-to-contain
+
+  bot-abuse:
+    description: >
+      Automated scripts and tools used to manipulate platform features at
+      scale, including inventory hoarding, price scraping, review
+      manipulation, and queue jumping.
+    severity: high
+    threat_actors:
+      - threat-actors/bot-operators.md
+      - threat-actors/reseller-networks.md
+    mitre_techniques:
+      - T1595       # Active Scanning
+      - T1592       # Gather Victim Host Information
+    kill_chain_phase: reconnaissance
+    detection_rules:
+      - detections-and-controls/detection-rules/behavioral-bot-signals.md
+      - detections-and-controls/detection-rules/session-velocity-anomaly.md
+      - detections-and-controls/detection-rules/api-abuse-pattern.md
+    controls:
+      - detections-and-controls/challenge-strategies/progressive-challenge.md
+      - detections-and-controls/controls/rate-limiting.md
+      - detections-and-controls/controls/device-fingerprinting.md
+    playbooks:
+      - incident-response/playbooks/bot-mitigation-response.md
+    trust_safety_patterns:
+      - trust-and-safety-patterns/bot-detection/behavioral-signals.md
+      - trust-and-safety-patterns/bot-detection/challenge-escalation.md
+    postmortems: []
+    nist_controls:
+      - PR.AC-4    # Access permissions and authorizations
+      - DE.CM-1
+    campaigns: []
+    kpis:
+      - metrics-and-reporting/kpis/trust-safety-kpis.md#bot-detection-rate
+      - metrics-and-reporting/kpis/trust-safety-kpis.md#challenge-solve-rate
+
+  content-abuse:
+    description: >
+      Submission of prohibited, harmful, or manipulative content including
+      counterfeit listings, misleading product descriptions, hate speech,
+      harassment, and scam communications.
+    severity: high
+    threat_actors:
+      - threat-actors/counterfeit-sellers.md
+      - threat-actors/scam-operators.md
+    mitre_techniques: []
+    kill_chain_phase: actions-on-objectives
+    detection_rules:
+      - detections-and-controls/detection-rules/listing-quality-signals.md
+      - detections-and-controls/detection-rules/messaging-scam-patterns.md
+    controls:
+      - detections-and-controls/controls/content-review-queue.md
+      - detections-and-controls/controls/seller-quality-gates.md
+    playbooks:
+      - incident-response/playbooks/content-moderation-escalation.md
+    trust_safety_patterns:
+      - trust-and-safety-patterns/content-moderation/taxonomy.md
+      - trust-and-safety-patterns/content-moderation/review-queue-design.md
+      - trust-and-safety-patterns/marketplace-abuse/counterfeit-detection.md
+    postmortems: []
+    nist_controls: []
+    campaigns: []
+    kpis:
+      - metrics-and-reporting/kpis/trust-safety-kpis.md#content-removal-rate
+      - metrics-and-reporting/kpis/trust-safety-kpis.md#time-to-action
+
+  social-engineering:
+    description: >
+      Manipulation of employees or users through phishing, vishing,
+      pretexting, or impersonation to gain unauthorized access or
+      extract sensitive information.
+    severity: critical
+    threat_actors:
+      - threat-actors/scattered-spider.md
+      - threat-actors/social-engineering-crews.md
+    mitre_techniques:
+      - T1566       # Phishing
+      - T1598       # Phishing for Information
+      - T1656       # Impersonation
+    kill_chain_phase: initial-access
+    detection_rules:
+      - detections-and-controls/detection-rules/phishing-url-detection.md
+      - detections-and-controls/detection-rules/internal-phishing-indicators.md
+    controls:
+      - detections-and-controls/controls/phishing-resistant-auth.md
+      - detections-and-controls/controls/security-awareness-program.md
+    playbooks:
+      - incident-response/playbooks/phishing-response.md
+    trust_safety_patterns: []
+    postmortems: []
+    nist_controls:
+      - PR.AT-1    # Security awareness training
+      - PR.AC-7    # Authentication
+      - DE.CM-1
+    campaigns: []
+    kpis:
+      - metrics-and-reporting/kpis/security-kpis.md#phishing-report-rate
+      - metrics-and-reporting/kpis/security-kpis.md#phishing-click-rate

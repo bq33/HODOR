@@ -1,0 +1,286 @@
+# Prism Security Team — Intelligence Source Registry
+#
+# Every source the team consumes is registered here with a trust tier,
+# update frequency, and action SLA. This allows both humans and AI
+# agents to immediately assess how to weight new intelligence.
+#
+# Trust Tiers:
+#   authoritative    — Act within SLA, no validation needed
+#   high             — Actionable, cross-reference for critical decisions
+#   moderate         — Validate key claims before major action
+#   requires-validation — Must cross-reference before any action
+
+# ============================================================
+# GOVERNMENT & STANDARDS BODIES
+# ============================================================
+
+sources:
+
+  - name: CISA Known Exploited Vulnerabilities (KEV)
+    id: cisa-kev
+    type: government
+    url: https://www.cisa.gov/known-exploited-vulnerabilities-catalog
+    trust_tier: authoritative
+    update_frequency: daily
+    action_sla: 24h
+    integration: automated
+    feed_format: json
+    notes: >
+      Mandatory patching catalog. If a CVE appears here, it is actively
+      exploited in the wild and must be remediated within the stated SLA.
+      Automated ingestion feeds directly into vulnerability management.
+
+  - name: CISA Advisories & Alerts
+    id: cisa-advisories
+    type: government
+    url: https://www.cisa.gov/news-events/cybersecurity-advisories
+    trust_tier: authoritative
+    update_frequency: as-published
+    action_sla: 48h
+    integration: manual-review
+    notes: >
+      Broader advisories covering threat actor campaigns, sector-specific
+      warnings, and defensive guidance. Not all are immediately actionable
+      but all require review and assessment.
+
+  - name: NIST National Vulnerability Database (NVD)
+    id: nist-nvd
+    type: government
+    url: https://nvd.nist.gov/
+    trust_tier: authoritative
+    update_frequency: continuous
+    action_sla: varies_by_cvss
+    integration: automated
+    feed_format: json
+    sla_by_severity:
+      critical: 24h
+      high: 72h
+      medium: 14d
+      low: 30d
+
+  - name: NIST Cybersecurity Framework (CSF)
+    id: nist-csf
+    type: framework
+    url: https://www.nist.gov/cyberframework
+    trust_tier: authoritative
+    update_frequency: periodic-revision
+    action_sla: not-applicable
+    notes: >
+      Reference framework for control mapping, not an operational feed.
+      Used to assess coverage gaps and align security posture to
+      industry standards.
+
+  - name: NIST SP 800-63 (Digital Identity Guidelines)
+    id: nist-800-63
+    type: framework
+    url: https://pages.nist.gov/800-63-4/
+    trust_tier: authoritative
+    update_frequency: periodic-revision
+    action_sla: not-applicable
+    notes: >
+      Defines identity assurance levels (IAL), authenticator assurance
+      levels (AAL), and federation assurance levels (FAL). Primary
+      reference for identity-and-access architecture decisions.
+
+  - name: FBI Internet Crime Complaint Center (IC3)
+    id: fbi-ic3
+    type: government
+    url: https://www.ic3.gov/
+    trust_tier: authoritative
+    update_frequency: as-published
+    action_sla: 72h
+    notes: >
+      Public service announcements on active fraud campaigns. Especially
+      relevant for marketplace fraud patterns and social engineering
+      campaigns targeting consumers.
+
+  - name: MITRE ATT&CK Framework
+    id: mitre-attack
+    type: framework
+    url: https://attack.mitre.org/
+    trust_tier: authoritative
+    update_frequency: quarterly
+    action_sla: not-applicable
+    notes: >
+      Adversary tactics, techniques, and procedures knowledge base.
+      Used for detection coverage mapping and threat actor profiling.
+      See compliance-and-frameworks/mitre-attack/ for our coverage analysis.
+
+  - name: OWASP Top 10
+    id: owasp-top10
+    type: framework
+    url: https://owasp.org/www-project-top-ten/
+    trust_tier: authoritative
+    update_frequency: periodic-revision
+    action_sla: not-applicable
+    notes: >
+      Web application security risk framework. Used to prioritize
+      application security testing and code review focus areas.
+
+# ============================================================
+# COMMERCIAL THREAT INTELLIGENCE
+# ============================================================
+
+  - name: Mandiant Threat Intelligence
+    id: mandiant
+    type: vendor
+    url: https://www.mandiant.com/advantage/threat-intelligence
+    trust_tier: high
+    update_frequency: daily
+    action_sla: 72h
+    integration: api
+    notes: >
+      Deep threat actor research and campaign analysis. Particularly
+      strong on APT attribution and incident forensics. Primary
+      source for threat actor profiling.
+
+  - name: CrowdStrike Falcon Intelligence
+    id: crowdstrike
+    type: vendor
+    url: https://www.crowdstrike.com/products/threat-intelligence/
+    trust_tier: high
+    update_frequency: daily
+    action_sla: 72h
+    integration: api
+    notes: >
+      Real-time threat intelligence with strong endpoint telemetry.
+      Good coverage of e-crime groups relevant to marketplace fraud.
+
+  - name: Recorded Future
+    id: recorded-future
+    type: vendor
+    url: https://www.recordedfuture.com/
+    trust_tier: high
+    update_frequency: continuous
+    action_sla: 48h
+    integration: api
+    notes: >
+      Broad OSINT aggregation and analysis. Strong for brand
+      monitoring, dark web mention tracking, and credential
+      leak detection relevant to Prism accounts.
+
+  - name: Google Threat Intelligence (VirusTotal)
+    id: google-ti
+    type: vendor
+    url: https://www.virustotal.com/
+    trust_tier: high
+    update_frequency: continuous
+    action_sla: varies
+    integration: api
+    notes: >
+      Malware analysis, IOC enrichment, and file/URL scanning.
+      Used for incident investigation and IOC validation.
+
+# ============================================================
+# INDUSTRY SHARING GROUPS
+# ============================================================
+
+  - name: Retail & Hospitality ISAC (RH-ISAC)
+    id: rh-isac
+    type: industry
+    url: https://rhisac.org/
+    trust_tier: moderate
+    update_frequency: weekly
+    action_sla: 1w
+    notes: >
+      Sector-specific threat sharing for retail and e-commerce.
+      Particularly valuable for payment fraud trends, POS malware,
+      and marketplace-specific attack patterns.
+
+  - name: Anti-Phishing Working Group (APWG)
+    id: apwg
+    type: industry
+    url: https://apwg.org/
+    trust_tier: moderate
+    update_frequency: quarterly-reports
+    action_sla: varies
+    notes: >
+      Phishing trend data and takedown coordination.
+
+# ============================================================
+# OPEN SOURCE INTELLIGENCE
+# ============================================================
+
+  - name: Security researcher community (Twitter/X, Mastodon, Bluesky)
+    id: social-osint
+    type: osint
+    trust_tier: requires-validation
+    update_frequency: continuous
+    action_sla: validate-then-act
+    validation_steps:
+      - cross_reference_cve_databases
+      - check_vendor_confirmation
+      - verify_poc_authenticity
+      - assess_researcher_reputation
+    notes: >
+      Early warning signal for zero-days and emerging threats. Often
+      surfaces intelligence 24-48h before formal advisories. High
+      noise-to-signal ratio requires disciplined validation.
+
+  - name: Dark web forums and marketplaces
+    id: dark-web
+    type: osint
+    trust_tier: requires-validation
+    update_frequency: continuous
+    action_sla: validate-then-act
+    monitoring_tool: recorded-future
+    validation_steps:
+      - assess_post_credibility
+      - check_for_prism_specific_mentions
+      - cross_reference_with_known_actors
+      - validate_sample_data_authenticity
+    notes: >
+      Monitoring for Prism-specific threats including credential
+      dumps, account sale listings, and attack tool discussions.
+      Actioned only after validation against known patterns.
+
+  - name: Paste sites and code repositories
+    id: paste-sites
+    type: osint
+    trust_tier: requires-validation
+    update_frequency: continuous
+    action_sla: validate-then-act
+    monitoring_tool: recorded-future
+    notes: >
+      Credential dumps, configuration leaks, and attack tool source
+      code. Automated monitoring for Prism domains, email patterns,
+      and API keys.
+
+  - name: Exploit databases (Exploit-DB, PacketStorm)
+    id: exploit-db
+    type: osint
+    url: https://www.exploit-db.com/
+    trust_tier: moderate
+    update_frequency: daily
+    action_sla: 72h
+    notes: >
+      Public exploit code and proof-of-concept demonstrations.
+      Monitored for exploits targeting Prism's technology stack.
+      Reliability is moderate because exploits are verified but
+      applicability to our environment requires assessment.
+
+# ============================================================
+# REGULATORY & LEGAL
+# ============================================================
+
+  - name: FTC Enforcement Actions
+    id: ftc
+    type: regulatory
+    url: https://www.ftc.gov/enforcement
+    trust_tier: authoritative
+    update_frequency: as-published
+    action_sla: review-within-1w
+    notes: >
+      Enforcement actions and consent decrees relevant to consumer
+      data protection, marketplace practices, and advertising
+      standards. Informs T&S policy updates.
+
+  - name: State Attorney General Actions
+    id: state-ag
+    type: regulatory
+    trust_tier: authoritative
+    update_frequency: as-published
+    action_sla: review-within-1w
+    notes: >
+      State-level enforcement relevant to privacy, data breach
+      notification, and consumer protection obligations.

@@ -1,0 +1,348 @@
+# Prism Security — MITRE ATT&CK Technique Coverage Map
+#
+# This file documents which ATT&CK techniques the team detects,
+# which have partial coverage, and which are gaps. Updated after
+# every new detection rule deployment or postmortem finding.
+#
+# Coverage Levels:
+#   full     — Detection rule(s) actively monitoring, tuned, and validated
+#   partial  — Detection exists but has known blind spots or limited scope
+#   gap      — No detection capability for this technique
+#   n/a      — Technique not applicable to Prism's environment
+#
+# Last reviewed: 2025-04-01
+# Next review: 2025-07-01
+
+techniques:
+
+  # ============================================================
+  # RECONNAISSANCE
+  # ============================================================
+
+  - id: T1595
+    name: Active Scanning
+    tactic: Reconnaissance
+    coverage: full
+    detection_rules:
+      - detections-and-controls/detection-rules/api-abuse-pattern.md
+    notes: >
+      API endpoint scanning and rate probing detected through
+      request pattern analysis. Coverage is strong for API-based
+      scanning but limited for passive web scraping.
+    threat_actors:
+      - threat-actors/bot-operators.md
+
+  - id: T1592
+    name: Gather Victim Host Information
+    tactic: Reconnaissance
+    coverage: partial
+    detection_rules:
+      - detections-and-controls/detection-rules/behavioral-bot-signals.md
+    notes: >
+      Can detect fingerprinting attempts that use active probing
+      (JavaScript execution, canvas rendering). Cannot detect
+      passive fingerprinting that relies on HTTP headers alone.
+    threat_actors:
+      - threat-actors/bot-operators.md
+
+  # ============================================================
+  # RESOURCE DEVELOPMENT
+  # ============================================================
+
+  - id: T1136
+    name: Create Account
+    tactic: Resource Development
+    coverage: full
+    detection_rules:
+      - detections-and-controls/detection-rules/registration-velocity.md
+      - detections-and-controls/detection-rules/synthetic-identity-signals.md
+      - detections-and-controls/detection-rules/email-domain-clustering.md
+    notes: >
+      Strong coverage for bulk account creation. Partial gap for
+      slow-drip account creation (1-2 accounts per day from diverse
+      infrastructure) used by sophisticated fraud rings during
+      their trust-building phase.
+    threat_actors:
+      - threat-actors/marketplace-fraud-rings.md
+      - threat-actors/bot-operators.md
+
+  - id: T1583.001
+    name: "Acquire Infrastructure: Domains"
+    tactic: Resource Development
+    coverage: partial
+    detection_rules:
+      - detections-and-controls/detection-rules/email-domain-clustering.md
+    notes: >
+      Detection limited to monitoring for disposable email domains
+      used during registration. No proactive monitoring for newly
+      registered domains that may be used for phishing Prism users.
+    gap_priority: medium
+    remediation_plan: >
+      Evaluate integration with domain registration monitoring
+      service for brand-impersonation domain detection.
+
+  - id: T1587.001
+    name: "Develop Capabilities: Malware"
+    tactic: Resource Development
+    coverage: n/a
+    notes: >
+      Bot tool development occurs outside Prism's visibility.
+      Detection focuses on the deployed tool's behavior rather
+      than its development.
+
+  - id: T1588.002
+    name: "Obtain Capabilities: Tool"
+    tactic: Resource Development
+    coverage: n/a
+    notes: >
+      Acquisition of bot tooling and proxy services occurs outside
+      Prism's visibility. Monitored through OSINT channels.
+
+  # ============================================================
+  # INITIAL ACCESS
+  # ============================================================
+
+  - id: T1110.004
+    name: "Brute Force: Credential Stuffing"
+    tactic: Initial Access
+    coverage: full
+    detection_rules:
+      - detections-and-controls/detection-rules/credential-stuffing-velocity.md
+      - detections-and-controls/detection-rules/breached-credential-match.md
+      - detections-and-controls/detection-rules/aggregate-auth-failure-volume.md
+      - detections-and-controls/detection-rules/subnet-credential-correlation.md
+    notes: >
+      Strong coverage after March 2025 postmortem improvements.
+      Velocity-based detection (DR-001), subnet correlation
+      (DR-001b), aggregate volume monitoring, and proactive
+      breach credential matching provide layered detection.
+    threat_actors:
+      - threat-actors/marketplace-fraud-rings.md
+      - threat-actors/scattered-spider.md
+
+  - id: T1078
+    name: Valid Accounts
+    tactic: Initial Access
+    coverage: partial
+    detection_rules:
+      - detections-and-controls/detection-rules/impossible-travel-login.md
+      - detections-and-controls/detection-rules/device-fingerprint-mismatch.md
+      - detections-and-controls/detection-rules/account-change-velocity.md
+    notes: >
+      Detection relies on behavioral anomalies after the attacker
+      has already authenticated. Strong for detecting post-login
+      anomalies (impossible travel, device mismatch, rapid account
+      changes). Gap exists for attackers who use the same geography
+      and device profile as the legitimate user.
+    gap_priority: high
+    remediation_plan: >
+      Account quality model v2 (RFC-001) will incorporate
+      session-level behavioral analysis to detect subtle anomalies
+      even when geography and device match.
+    threat_actors:
+      - threat-actors/marketplace-fraud-rings.md
+      - threat-actors/scattered-spider.md
+
+  - id: T1566
+    name: Phishing
+    tactic: Initial Access
+    coverage: partial
+    detection_rules:
+      - detections-and-controls/detection-rules/phishing-url-detection.md
+      - detections-and-controls/detection-rules/internal-phishing-indicators.md
+    notes: >
+      Email-based phishing targeting employees is covered through
+      email security integration. Phishing targeting Prism users
+      (fake login pages) is covered through brand monitoring and
+      URL scanning. Gap exists for spearphishing via SMS and voice
+      channels.
+    gap_priority: medium
+    threat_actors:
+      - threat-actors/scattered-spider.md
+
+  - id: T1566.004
+    name: "Phishing: Spearphishing Voice"
+    tactic: Initial Access
+    coverage: gap
+    detection_rules: []
+    notes: >
+      No technical detection capability for vishing attacks
+      targeting help desk or support staff. Mitigation is
+      procedural: identity verification requirements for phone-
+      based account actions and mandatory callback procedures.
+    gap_priority: high
+    remediation_plan: >
+      Implement call recording and AI-based social engineering
+      detection for customer support calls. Evaluate voice
+      biometric verification for high-privilege phone requests.
+    threat_actors:
+      - threat-actors/scattered-spider.md
+
+  - id: T1598
+    name: Phishing for Information
+    tactic: Reconnaissance
+    coverage: partial
+    detection_rules:
+      - detections-and-controls/detection-rules/internal-phishing-indicators.md
+    notes: >
+      Covered for email-based information gathering against
+      employees. Gap for social media and LinkedIn-based pretexting.
+    threat_actors:
+      - threat-actors/scattered-spider.md
+
+  # ============================================================
+  # PERSISTENCE / CREDENTIAL ACCESS
+  # ============================================================
+
+  - id: T1556
+    name: Modify Authentication Process
+    tactic: Persistence
+    coverage: full
+    detection_rules:
+      - detections-and-controls/detection-rules/account-change-velocity.md
+    notes: >
+      Detects rapid changes to MFA enrollment, email address, phone
+      number, or password within a short window after authentication.
+      Strong coverage for post-compromise account manipulation.
+    threat_actors:
+      - threat-actors/scattered-spider.md
+
+  - id: T1111
+    name: Multi-Factor Authentication Interception
+    tactic: Credential Access
+    coverage: gap
+    detection_rules: []
+    notes: >
+      No detection for SIM swapping that occurs at the carrier
+      level before the intercepted MFA code is used on Prism.
+      Mitigation is architectural: migrate users from SMS-based
+      MFA to phishing-resistant methods (passkeys, authenticator
+      apps).
+    gap_priority: critical
+    remediation_plan: >
+      Passkey rollout (Q2-Q3 2025) will eliminate the SIM swap
+      attack surface for enrolled users. In the interim, high-
+      value accounts are being migrated to authenticator app-based
+      MFA.
+    threat_actors:
+      - threat-actors/scattered-spider.md
+
+  - id: T1539
+    name: Steal Web Session Cookie
+    tactic: Credential Access
+    coverage: partial
+    detection_rules:
+      - detections-and-controls/detection-rules/session-anomaly.md
+    notes: >
+      Session anomaly detection can identify sessions that suddenly
+      change source IP or device fingerprint, which may indicate
+      session token theft. Gap for malware-based session theft where
+      the attacker replays the session from the same network.
+    threat_actors:
+      - threat-actors/scattered-spider.md
+
+  # ============================================================
+  # DEFENSE EVASION
+  # ============================================================
+
+  - id: T1036
+    name: Masquerading
+    tactic: Defense Evasion
+    coverage: partial
+    detection_rules:
+      - detections-and-controls/detection-rules/behavioral-bot-signals.md
+      - detections-and-controls/detection-rules/session-velocity-anomaly.md
+    notes: >
+      Behavioral analysis detects many bot masquerading techniques
+      but sophisticated "low-and-slow" bots with realistic timing
+      and interaction patterns remain difficult to distinguish from
+      legitimate users. Residential proxy detection is an ongoing
+      challenge.
+    gap_priority: medium
+    remediation_plan: >
+      Enhanced client-side telemetry (mouse movement, scroll
+      patterns, keystroke dynamics) planned for Q3 2025 to improve
+      behavioral signal quality.
+    threat_actors:
+      - threat-actors/bot-operators.md
+      - threat-actors/marketplace-fraud-rings.md
+
+  - id: T1656
+    name: Impersonation
+    tactic: Defense Evasion
+    coverage: partial
+    detection_rules:
+      - detections-and-controls/detection-rules/messaging-scam-patterns.md
+    notes: >
+      Platform messaging analysis detects impersonation in user-to-user
+      messages. Gap for employee impersonation via external channels
+      (phone, email).
+    threat_actors:
+      - threat-actors/scattered-spider.md
+      - threat-actors/scam-operators.md
+
+  # ============================================================
+  # IMPACT
+  # ============================================================
+
+  - id: T1657
+    name: Financial Theft
+    tactic: Impact
+    coverage: full
+    detection_rules:
+      - detections-and-controls/detection-rules/payment-velocity-anomaly.md
+      - detections-and-controls/detection-rules/card-testing-pattern.md
+      - detections-and-controls/detection-rules/shipping-address-mismatch.md
+    notes: >
+      Strong detection for common payment fraud patterns. Transaction
+      risk scoring provides real-time blocking for high-risk purchases.
+    threat_actors:
+      - threat-actors/marketplace-fraud-rings.md
+      - threat-actors/carding-networks.md
+
+  - id: T1486
+    name: Data Encrypted for Impact
+    tactic: Impact
+    coverage: full
+    detection_rules:
+      - detections-and-controls/detection-rules/ransomware-file-activity.md
+    notes: >
+      Endpoint detection covers ransomware encryption behavior on
+      managed devices. Server-side monitoring covers anomalous file
+      modification patterns in production infrastructure.
+    threat_actors:
+      - threat-actors/lockbit.md
+      - threat-actors/blackcat-alphv.md
+
+  - id: T1498
+    name: Network Denial of Service
+    tactic: Impact
+    coverage: full
+    detection_rules: []
+    notes: >
+      Handled at the infrastructure layer through CDN-based DDoS
+      mitigation. Not directly monitored through HODOR detection
+      rules.
+
+# ============================================================
+# COVERAGE SUMMARY
+# ============================================================
+
+summary:
+  total_techniques_tracked: 22
+  full_coverage: 10
+  partial_coverage: 8
+  gaps: 3
+  not_applicable: 2
+  
+  critical_gaps:
+    - T1111: MFA Interception (SIM swapping)
+    
+  high_priority_gaps:
+    - T1566.004: Spearphishing Voice
+    - T1078: Valid Accounts (same-geography attacker)
+    
+  medium_priority_gaps:
+    - T1036: Masquerading (low-and-slow bots)
+    - T1583.001: Acquire Infrastructure (brand impersonation domains)
+    - T1566: Phishing (SMS/voice channels)
