@@ -1,0 +1,220 @@
+# HODOR Intelligence Index — Misprint Collectibles Marketplace
+#
+# Master cross-reference linking all intel cards, controls, and runbooks.
+# Every artifact is connected. No orphan objects.
+#
+# When an AI agent encounters any security or trust & safety topic
+# in this environment, it can trace the full chain: threat → detection
+# → response → measurement.
+
+environment:
+  name: "Misprint-Style Collectibles Marketplace"
+  type: example
+  description: >
+    A fictional but realistic collectibles trading platform where users
+    buy, sell, and trade items such as trading cards, limited edition
+    prints, and graded collectibles. Models the specific trust and safety
+    challenges created by scarcity-driven pricing, condition-based
+    valuation, and reputation-dependent buyer trust.
+
+threats:
+
+  price-manipulation:
+    id: INTEL-MISPRINT-001
+    title: "Price Manipulation via Fake Listings"
+    severity: critical
+    status: active
+    intel_card: "intel-cards/price-manipulation-fake-listings.yaml"
+    summary: >
+      Coordinated networks create artificial listings at inflated prices
+      to distort market value perception and contaminate platform pricing data.
+    attack_patterns:
+      - wash_trading
+      - comp_stacking
+      - shill_bidding
+      - grading_arbitrage
+    detected_by:
+      - control: "controls/listing-integrity-scoring.yaml"
+        coverage: full
+        description: "Pricing deviation, network correlation, and re-listing velocity signals detect most manipulation patterns"
+      - control: "controls/seller-reputation-scoring.yaml"
+        coverage: partial
+        description: "Network independence signals identify coordinated seller clusters, but do not directly detect individual fake listings"
+    responded_with:
+      - runbook: "runbooks/marketplace-integrity-response.yaml"
+        trigger: "3+ listings flagged as high-confidence manipulation within 24 hours for the same item"
+    key_metrics:
+      - "price_manipulation_detection_rate (target: >70%)"
+      - "price_index_contamination_rate (target: <2%)"
+      - "time_to_detect_manipulation (target: <72 hours)"
+
+  reputation-farming:
+    id: INTEL-MISPRINT-002
+    title: "Seller Reputation Farming"
+    severity: high
+    status: active
+    intel_card: "intel-cards/seller-reputation-farming.yaml"
+    summary: >
+      Fake account networks conduct circular low-value transactions to
+      manufacture seller ratings and badges, enabling future high-value
+      scams or account resale.
+    attack_patterns:
+      - transaction_loop_farming
+      - review_seeding
+      - badge_farming
+      - account_sale
+    detected_by:
+      - control: "controls/seller-reputation-scoring.yaml"
+        coverage: full
+        description: "Transaction diversity, network independence, and behavioral consistency signals identify farming patterns"
+      - control: "controls/listing-integrity-scoring.yaml"
+        coverage: partial
+        description: "Network signals detect coordinated activity but farming-specific signals are in CTRL-MISPRINT-002"
+    responded_with:
+      - runbook: "runbooks/marketplace-integrity-response.yaml"
+        trigger: "Cluster of 5+ accounts with SRS < 0.2 and high internal transaction density"
+    key_metrics:
+      - "reputation_farming_detection_rate (target: >60%)"
+      - "fake_review_identification_rate (target: >50%)"
+      - "badge_integrity_rate (target: >95%)"
+      - "account_sale_detection_rate (target: >40%)"
+
+  account-takeover:
+    id: INTEL-MISPRINT-003
+    title: "Account Takeover Targeting High-Value Collections"
+    severity: critical
+    status: active
+    intel_card: "intel-cards/account-takeover-high-value-collections.yaml"
+    summary: >
+      Credential stuffing and phishing attacks targeting accounts with
+      valuable collectible inventories for rapid liquidation or transfer.
+    attack_patterns:
+      - credential_stuffing_targeted
+      - platform_messaging_phishing
+      - rapid_liquidation
+      - collection_transfer
+      - account_lockout
+    detected_by:
+      - control: "controls/listing-integrity-scoring.yaml"
+        coverage: partial
+        description: "Pricing anomaly signals detect below-market bulk listings from compromised accounts"
+      - control: "controls/seller-reputation-scoring.yaml"
+        coverage: partial
+        description: "Behavioral consistency signals detect sudden changes in account behavior post-compromise"
+    detection_gaps:
+      - gap: "No dedicated credential stuffing detection at authentication layer"
+        priority: critical
+        remediation: "Implement authentication velocity monitoring and breached credential correlation"
+      - gap: "No step-up authentication for sensitive actions"
+        priority: critical
+        remediation: "Require re-authentication before payout changes, bulk listings, and item transfers"
+      - gap: "Public collection portfolios enable target selection"
+        priority: medium
+        remediation: "Offer privacy settings for collection visibility"
+    responded_with:
+      - runbook: "runbooks/marketplace-integrity-response.yaml"
+        trigger: "Payout method change + bulk listing creation within 30 minutes on a high-value account"
+    key_metrics:
+      - "ato_detection_rate (target: >80%)"
+      - "mean_time_to_detect_ato (target: <30 minutes)"
+      - "credential_stuffing_block_rate (target: >95%)"
+      - "collection_recovery_rate (target: >70%)"
+      - "mfa_adoption_rate (target: >50% for $1K+ collections)"
+
+controls:
+
+  listing-integrity-scoring:
+    id: CTRL-MISPRINT-001
+    name: "Listing Integrity Scoring"
+    file: "controls/listing-integrity-scoring.yaml"
+    maturity: operational
+    status: active
+    addresses_threats:
+      - "price-manipulation (full coverage)"
+      - "account-takeover (partial — detects below-market liquidation listings)"
+    signal_categories:
+      - pricing_signals (weight: 0.30)
+      - seller_signals (weight: 0.25)
+      - content_signals (weight: 0.20)
+      - network_signals (weight: 0.25)
+    key_metrics:
+      - "listing_suppression_rate (current: 3.2%, target: <5%)"
+      - "price_index_contamination_rate (current: 1.8%, target: <2%)"
+      - "false_positive_rate (current: 12%, target: <15%)"
+      - "mean_time_to_suppress (current: 8 min, target: <15 min)"
+
+  seller-reputation-scoring:
+    id: CTRL-MISPRINT-002
+    name: "Seller Reputation Scoring"
+    file: "controls/seller-reputation-scoring.yaml"
+    maturity: operational
+    status: active
+    addresses_threats:
+      - "reputation-farming (full coverage)"
+      - "price-manipulation (partial — network independence signals)"
+      - "account-takeover (partial — behavioral consistency signals)"
+    signal_categories:
+      - transaction_diversity (weight: 0.30)
+      - network_independence (weight: 0.25)
+      - behavioral_consistency (weight: 0.25)
+      - account_fundamentals (weight: 0.20)
+    key_metrics:
+      - "farming_ring_detection_rate (current: 64%, target: >60%)"
+      - "badge_integrity_rate (current: 96%, target: >95%)"
+      - "false_restriction_rate (current: 8%, target: <10%)"
+      - "account_sale_detection_rate (current: 38%, target: >40%)"
+
+runbooks:
+
+  marketplace-integrity-response:
+    id: RUN-MISPRINT-001
+    name: "Marketplace Integrity Response"
+    file: "runbooks/marketplace-integrity-response.yaml"
+    status: active
+    addresses_threats:
+      - price-manipulation
+      - reputation-farming
+      - account-takeover
+    trigger_sources:
+      - "CTRL-MISPRINT-001 (listing integrity alerts)"
+      - "CTRL-MISPRINT-002 (reputation score cluster alerts)"
+      - "Authentication monitoring (credential stuffing velocity)"
+      - "Account change monitoring (payout + bulk listing pattern)"
+      - "Buyer reports and analyst escalations"
+    key_metrics:
+      - "mean_time_to_contain (target: <2h critical, <8h high)"
+      - "buyer_remediation_rate (target: >90% within 48h)"
+      - "price_index_restoration_time (target: <24h)"
+      - "false_containment_rate (target: <5%)"
+
+coverage_summary:
+  total_threats: 3
+  total_controls: 2
+  total_runbooks: 1
+
+  coverage_matrix:
+    price-manipulation:
+      detection: full
+      response: covered
+      gaps: none
+    reputation-farming:
+      detection: full
+      response: covered
+      gaps: none
+    account-takeover:
+      detection: partial
+      response: covered
+      gaps:
+        - "No dedicated credential stuffing detection (critical)"
+        - "No step-up authentication for sensitive actions (critical)"
+        - "Public collection portfolios enable targeting (medium)"
+
+  priority_gaps:
+    - threat: account-takeover
+      gap: "Authentication layer has no dedicated credential stuffing detection"
+      priority: critical
+      recommended_control: "Deploy authentication velocity monitoring with breached credential correlation"
+    - threat: account-takeover
+      gap: "No step-up authentication before payout changes, bulk listings, or item transfers"
+      priority: critical
+      recommended_control: "Implement MFA or re-authentication challenge for high-risk account actions"

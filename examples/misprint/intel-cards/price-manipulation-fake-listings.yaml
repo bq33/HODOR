@@ -1,0 +1,129 @@
+id: INTEL-MISPRINT-001
+title: "Price Manipulation via Fake Listings"
+summary: >
+  Coordinated networks of seller accounts create artificial listings at
+  inflated prices to distort the perceived market value of specific
+  collectible items. The manipulation targets the platform's price
+  indexing and "last sold" reference data, which buyers use to assess
+  fair market value. Once the perceived value is inflated, the
+  manipulators sell genuine inventory at the artificially elevated
+  price to uninformed buyers, or use the inflated valuations to
+  justify insurance claims, loan collateral, or off-platform sales.
+
+dates:
+  first_observed: "2024-08-15"
+  last_observed: "2025-03-28"
+  intel_created: "2024-09-02"
+  last_updated: "2025-04-01"
+
+status: active
+
+intelligence_type: threat_pattern
+
+severity: critical
+
+threat_categories:
+  - price_manipulation
+  - coordinated_inauthentic_behavior
+  - marketplace_integrity
+  - fraud
+
+affected_surfaces:
+  - listing_creation: "Fake listings posted at inflated prices to establish false comps"
+  - price_index: "Platform price history and average sale data contaminated with artificial transactions"
+  - search_and_discovery: "Inflated listings appear in search results, normalizing fake prices for buyers"
+  - auction_system: "Shill bidding on auctions to drive up final sale price and establish false market signals"
+  - recently_sold_feed: "Wash sales between coordinated accounts appear as legitimate transactions in the sold feed"
+
+tactics_techniques:
+  - name: "Wash trading"
+    description: >
+      Two or more accounts controlled by the same operator buy and sell
+      items to each other at progressively higher prices. Each transaction
+      is recorded as a legitimate sale in the platform's price history,
+      creating an artificial upward price trajectory.
+  - name: "Comp stacking"
+    description: >
+      Multiple fake listings are posted at inflated prices across several
+      seller accounts simultaneously. Even if the listings don't sell,
+      their presence establishes an inflated "asking price" range that
+      anchors buyer expectations.
+  - name: "Shill bidding"
+    description: >
+      In auction-format listings, coordinated accounts place bids to
+      drive up the final sale price. The shill bidders withdraw or are
+      outbid by a legitimate buyer who pays the inflated price.
+  - name: "Grading arbitrage"
+    description: >
+      Items with ambiguous condition grades are listed with inflated
+      grade descriptions. A card that would be graded 7 by a professional
+      service is listed as "near mint" to justify a price consistent
+      with a 9 or 10 grade.
+
+indicators:
+  - "Clusters of listings for the same item posted within 24-48 hours at prices 40%+ above recent market average"
+  - "Seller accounts with transaction history concentrated in the same item categories, buying from and selling to a small group of counterparts"
+  - "New listings where the asking price exceeds the 90th percentile of the trailing 30-day price for that item with no condition or rarity justification"
+  - "Auction final sale prices that exceed the pre-auction estimate by 3x+ where the top 2-3 bidders have thin account histories"
+  - "Accounts that list items, sell to a connected account, then the buyer re-lists the same item at a higher price within 7 days"
+
+recommended_actions:
+  - action: "Deploy listing integrity scoring"
+    priority: critical
+    description: >
+      Implement real-time scoring of new listings against trailing market
+      data to flag statistical outliers before they enter the price index.
+    control_ref: "controls/listing-integrity-scoring.yaml"
+  - action: "Exclude flagged transactions from price index"
+    priority: high
+    description: >
+      Transactions between accounts flagged by the seller reputation model
+      or identified as part of coordinated networks should be excluded
+      from the platform's price history and average calculations.
+  - action: "Graph analysis of transaction networks"
+    priority: high
+    description: >
+      Build and regularly run graph analysis to identify clusters of
+      accounts with circular transaction patterns, shared payment methods,
+      shared devices, or shared IP addresses.
+  - action: "Introduce price index transparency"
+    priority: medium
+    description: >
+      Show buyers the volume and recency of sales used to calculate
+      the displayed market price, so they can assess whether the
+      price signal is based on robust data or a small number of
+      potentially manipulated transactions.
+
+owner: "Trust & Safety Lead"
+
+related_controls:
+  - "controls/listing-integrity-scoring.yaml"
+  - "controls/seller-reputation-scoring.yaml"
+
+related_runbooks:
+  - "runbooks/marketplace-integrity-response.yaml"
+
+related_metrics:
+  - metric: "price_manipulation_detection_rate"
+    description: "Percentage of confirmed price manipulation schemes detected before buyer harm occurs"
+    target: ">70%"
+  - metric: "price_index_contamination_rate"
+    description: "Percentage of transactions in the price index later identified as wash trades or coordinated manipulation"
+    target: "<2%"
+  - metric: "time_to_detect_manipulation"
+    description: "Median time from first manipulated listing to detection by the platform"
+    target: "<72 hours"
+
+notes: >
+  Price manipulation is the highest-impact threat to marketplace integrity
+  because it undermines the fundamental trust signal buyers rely on: the
+  price. When buyers can't trust that displayed prices reflect genuine
+  market activity, they either overpay or leave the platform entirely.
+  Both outcomes damage the marketplace.
+
+  The collectibles market is particularly vulnerable because pricing is
+  driven by scarcity and perceived demand rather than intrinsic value.
+  A common baseball card and a rare misprint of the same card can differ
+  in value by 1000x, and the only way a buyer knows which is which is
+  by trusting the market data. Manipulating that data is the most
+  efficient form of fraud on the platform.

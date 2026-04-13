@@ -1,0 +1,162 @@
+id: INTEL-MISPRINT-003
+title: "Account Takeover Targeting High-Value Collections"
+summary: >
+  Attackers use credential stuffing, phishing, and social engineering
+  to compromise accounts that hold high-value collectible inventories.
+  Once access is gained, the attacker rapidly lists the victim's
+  collection at below-market prices for immediate sale, transfers
+  items to accomplice accounts, or changes the linked payout method
+  to redirect sale proceeds. The time-sensitivity is extreme:
+  collectibles listed at 40-60% of market value sell within minutes,
+  giving the victim almost no recovery window. High-value accounts
+  (collections worth $10,000+) are specifically targeted using
+  publicly visible collection portfolios and wishlist data.
+
+dates:
+  first_observed: "2024-04-22"
+  last_observed: "2025-03-15"
+  intel_created: "2024-05-10"
+  last_updated: "2025-03-20"
+
+status: active
+
+intelligence_type: threat_pattern
+
+severity: critical
+
+threat_categories:
+  - account_takeover
+  - credential_stuffing
+  - identity_theft
+  - financial_theft
+  - collection_liquidation
+
+affected_surfaces:
+  - authentication: "Login endpoint targeted by credential stuffing using breached credential databases"
+  - account_settings: "Payout method, email address, and phone number changed post-compromise to lock out legitimate owner"
+  - listing_creation: "Victim's inventory listed at steep discounts for rapid liquidation"
+  - item_transfer: "Collection items transferred to accomplice accounts before the victim regains access"
+  - collection_portfolio: "Public portfolio pages used for reconnaissance to identify high-value targets"
+  - messaging_system: "Phishing messages sent through platform DMs impersonating support or offering trades"
+
+tactics_techniques:
+  - name: "Credential stuffing against high-value targets"
+    description: >
+      Attackers obtain breached credential databases and test them
+      against the platform's login endpoint. Rather than broad
+      credential stuffing, sophisticated operators first identify
+      high-value accounts through public collection portfolios,
+      then test credentials only against those accounts to reduce
+      detection surface.
+  - name: "Phishing via platform messaging"
+    description: >
+      Attackers send platform DMs impersonating customer support
+      ("Your account security requires verification") or offering
+      trades ("I want to buy your [rare item], please confirm
+      through this link"). The link leads to a credential harvesting
+      page that mimics the platform's login.
+  - name: "Rapid liquidation"
+    description: >
+      Within minutes of gaining access, the attacker lists all
+      high-value items at 40-60% of market value. At these prices,
+      items sell almost immediately to legitimate bargain-hunting
+      buyers. The attacker then changes the payout method and
+      initiates withdrawal of the sale proceeds.
+  - name: "Collection transfer"
+    description: >
+      Instead of selling items on the compromised account (which
+      leaves a transaction trail), the attacker transfers items
+      to pre-positioned accomplice accounts, then sells from those
+      accounts. This adds a layer of separation between the
+      compromise and the monetization.
+  - name: "Account lockout"
+    description: >
+      After gaining access, the attacker changes the email address,
+      phone number, and password on the account to prevent the
+      legitimate owner from recovering access through standard
+      recovery flows. This buys time for liquidation.
+
+indicators:
+  - "Login from a new device and IP immediately followed by payout method change within 15 minutes"
+  - "Bulk listing creation (5+ items within 30 minutes) at prices 40%+ below recent market averages"
+  - "Account settings changes (email, phone, password) all occurring within the same session"
+  - "Item transfers to accounts created within the last 30 days"
+  - "Login from IP addresses or geolocations inconsistent with the account's established pattern"
+  - "Credential stuffing velocity: multiple failed login attempts on high-value accounts from the same IP range within a short window"
+  - "Platform DMs containing URLs that resolve to domains visually similar to the platform's domain"
+
+recommended_actions:
+  - action: "Implement step-up authentication for sensitive actions"
+    priority: critical
+    description: >
+      Require re-authentication (MFA, email confirmation, or identity
+      verification) before allowing payout method changes, bulk listing
+      creation, or item transfers. This breaks the rapid liquidation
+      timeline even if the attacker has the primary credentials.
+  - action: "Deploy credential stuffing detection"
+    priority: critical
+    description: >
+      Monitor authentication endpoints for velocity anomalies, breached
+      credential correlation, and targeted patterns where failed attempts
+      concentrate on accounts with public high-value portfolios.
+  - action: "Introduce liquidation velocity controls"
+    priority: high
+    description: >
+      Flag or hold listings when an account suddenly lists multiple
+      high-value items at significant discounts. Apply a 24-hour hold
+      on proceeds from bulk listings that deviate from the seller's
+      established behavior pattern.
+  - action: "Offer collection privacy settings"
+    priority: medium
+    description: >
+      Allow users to make their collection portfolios private or
+      partially hidden. Public portfolios are currently used by
+      attackers to identify high-value targets.
+  - action: "Proactive breach credential monitoring"
+    priority: high
+    description: >
+      Monitor breach databases for credentials associated with
+      platform accounts. Proactively force password resets for
+      accounts found in new breaches before attackers can test them.
+
+owner: "Security Engineering Lead"
+
+related_controls:
+  - "controls/listing-integrity-scoring.yaml"
+  - "controls/seller-reputation-scoring.yaml"
+
+related_runbooks:
+  - "runbooks/marketplace-integrity-response.yaml"
+
+related_metrics:
+  - metric: "ato_detection_rate"
+    description: "Percentage of account takeovers detected before collection liquidation completes"
+    target: ">80%"
+  - metric: "mean_time_to_detect_ato"
+    description: "Median time from account compromise to platform detection"
+    target: "<30 minutes"
+  - metric: "credential_stuffing_block_rate"
+    description: "Percentage of credential stuffing attempts blocked before successful authentication"
+    target: ">95%"
+  - metric: "collection_recovery_rate"
+    description: "Percentage of items recovered or transactions reversed after confirmed ATO"
+    target: ">70%"
+  - metric: "mfa_adoption_rate"
+    description: "Percentage of accounts with high-value collections ($1,000+) that have MFA enabled"
+    target: ">50%"
+
+notes: >
+  Account takeover on collectibles platforms has a unique urgency
+  dynamic. Unlike financial accounts where fraudulent transactions
+  can be reversed through established banking processes, a collectible
+  item sold to a good-faith buyer creates a much more complex recovery
+  situation. The buyer acted in good faith, the item is genuine, and
+  unwinding the transaction harms the innocent buyer. This means
+  prevention and rapid detection are far more valuable than
+  post-incident recovery.
+
+  The public portfolio feature, while valuable for community engagement
+  and trading, is effectively a target list for attackers. Any account
+  with a visible collection worth $10,000+ should be considered a
+  high-value target that warrants additional authentication protection,
+  regardless of the user's own security awareness.

@@ -1,0 +1,172 @@
+id: CTRL-MISPRINT-001
+name: "Listing Integrity Scoring"
+
+control_family: marketplace_integrity
+
+objective: >
+  Detect and flag listings that exhibit pricing anomalies, fake listing
+  signals, or coordinated manipulation patterns before they contaminate
+  the platform's price index or deceive buyers.
+
+description: >
+  The Listing Integrity Score (LIS) is a composite risk score assigned
+  to every new listing at creation time and updated as the listing
+  receives engagement. The score evaluates the listing across four
+  signal categories: pricing deviation from market norms, seller
+  behavioral patterns, listing content quality, and network correlation
+  with known manipulation clusters.
+
+  Listings that exceed the scoring threshold are routed to one of three
+  enforcement paths: automatic suppression from search results and price
+  index (high confidence manipulation), manual review queue (moderate
+  confidence), or enhanced monitoring (low confidence, watch for
+  additional signals). The goal is to prevent manipulated listings from
+  influencing market data while minimizing false positive impact on
+  legitimate sellers.
+
+covered_threat_categories:
+  - price_manipulation
+  - coordinated_inauthentic_behavior
+  - marketplace_integrity
+  - counterfeit_listings
+  - shill_bidding
+
+covered_surfaces:
+  - listing_creation
+  - price_index
+  - search_and_discovery
+  - auction_system
+  - recently_sold_feed
+
+input_signals:
+  pricing_signals:
+    weight: 0.30
+    signals:
+      - name: "Price deviation from trailing average"
+        description: "Listing price compared to the 30-day trailing average sale price for the same item (matched by title, category, condition grade)"
+        threshold: ">2 standard deviations above trailing average triggers score contribution"
+        score_contribution: 0.0-1.0 scaled by deviation magnitude
+
+      - name: "Price clustering"
+        description: "Multiple listings for the same item posted within 48 hours at similar inflated prices from different seller accounts"
+        threshold: "3+ listings within 48 hours at prices >40% above trailing average"
+        score_contribution: 0.7
+
+      - name: "Auction final price anomaly"
+        description: "Auction final sale price exceeds pre-auction estimate by 3x or more"
+        threshold: "Final price > 3x median estimate"
+        score_contribution: 0.5
+
+      - name: "Re-listing velocity"
+        description: "Same item sold and re-listed within 7 days at a higher price by a connected account"
+        threshold: "Re-list within 7 days at >20% price increase"
+        score_contribution: 0.8
+
+  seller_signals:
+    weight: 0.25
+    signals:
+      - name: "Seller account age"
+        description: "Newer accounts listing high-value items receive higher scores"
+        threshold: "Account < 30 days listing items > $500"
+        score_contribution: 0.4
+
+      - name: "Seller transaction diversity"
+        description: "Percentage of the seller's transactions that involve unique counterparties"
+        threshold: "< 50% unique counterparties across last 30 transactions"
+        score_contribution: 0.6
+
+      - name: "Seller reputation score cross-reference"
+        description: "Seller's reputation score from CTRL-MISPRINT-002"
+        threshold: "Reputation score < 0.4 (out of 1.0)"
+        score_contribution: 0.5
+
+  content_signals:
+    weight: 0.20
+    signals:
+      - name: "Image quality and originality"
+        description: "Stock photos, reused images from other listings, or AI-generated product photos"
+        threshold: "Image hash match to known stock/reused images"
+        score_contribution: 0.6
+
+      - name: "Description quality"
+        description: "Missing condition details, vague grading claims, or template descriptions used across multiple listings"
+        threshold: "Description similarity > 90% across 3+ listings from different sellers"
+        score_contribution: 0.4
+
+      - name: "Grading misrepresentation signals"
+        description: "Listed condition grade inconsistent with visible condition in photos"
+        threshold: "Automated grading estimate differs from claimed grade by 2+ levels"
+        score_contribution: 0.7
+
+  network_signals:
+    weight: 0.25
+    signals:
+      - name: "Transaction network density"
+        description: "Seller participates in a cluster of accounts with high internal transaction density"
+        threshold: "Account is part of a cluster where > 60% of transactions are intra-cluster"
+        score_contribution: 0.9
+
+      - name: "Shared infrastructure"
+        description: "Seller shares device fingerprint, IP address, or payment method with other active sellers"
+        threshold: "Shared attribute with 2+ other seller accounts"
+        score_contribution: 0.7
+
+      - name: "Coordinated listing timing"
+        description: "Multiple sellers list the same item category within a narrow time window"
+        threshold: "3+ sellers list same item within 4 hours"
+        score_contribution: 0.5
+
+enforcement_points:
+  - threshold: "aggregate_score >= 0.8"
+    action: "Suppress from search results and exclude from price index. Flag for manual review within 4 hours."
+    label: "High confidence manipulation"
+
+  - threshold: "aggregate_score >= 0.5"
+    action: "Route to manual review queue. Listing remains visible but excluded from price index until reviewed."
+    label: "Moderate confidence"
+
+  - threshold: "aggregate_score >= 0.3"
+    action: "Enhanced monitoring. Listing remains active and indexed. Alert if additional signals accumulate."
+    label: "Low confidence — watch"
+
+  - threshold: "aggregate_score < 0.3"
+    action: "No action. Standard listing."
+    label: "Normal"
+
+owner: "Trust & Safety Engineering"
+
+maturity: operational
+# Maturity levels: concept | development | pilot | operational | optimized
+
+status: active
+
+tuning_history:
+  - date: "2024-09-15"
+    change: "Initial deployment with pricing and seller signals only"
+  - date: "2024-11-20"
+    change: "Added network signals after identifying coordinated wash trading ring"
+  - date: "2025-01-10"
+    change: "Added content signals for grading misrepresentation"
+  - date: "2025-03-05"
+    change: "Increased network signal weight from 0.20 to 0.25 and reduced content from 0.25 to 0.20 based on precision analysis"
+
+related_metrics:
+  - metric: "listing_suppression_rate"
+    description: "Percentage of new listings suppressed by the scoring model"
+    current_value: "3.2%"
+    target: "<5% (minimize false positive impact on legitimate sellers)"
+
+  - metric: "price_index_contamination_rate"
+    description: "Percentage of transactions in the price index later confirmed as manipulated"
+    current_value: "1.8%"
+    target: "<2%"
+
+  - metric: "false_positive_rate"
+    description: "Percentage of suppressed listings that are confirmed legitimate on manual review"
+    current_value: "12%"
+    target: "<15%"
+
+  - metric: "mean_time_to_suppress"
+    description: "Median time from listing creation to suppression for high-confidence manipulation"
+    current_value: "8 minutes"
+    target: "<15 minutes"

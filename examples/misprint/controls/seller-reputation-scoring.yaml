@@ -1,0 +1,177 @@
+id: CTRL-MISPRINT-002
+name: "Seller Reputation Scoring"
+
+control_family: trust_and_identity
+
+objective: >
+  Evaluate seller trustworthiness across the full account lifecycle
+  using behavioral, transactional, and network signals to distinguish
+  genuine sellers from reputation-farmed, compromised, or fraudulent
+  accounts.
+
+description: >
+  The Seller Reputation Score (SRS) is a continuous trust assessment
+  that goes beyond the platform's public star rating. While the public
+  rating reflects buyer satisfaction, the SRS evaluates the authenticity
+  and sustainability of the seller's reputation by analyzing transaction
+  diversity, buyer uniqueness, value distribution, behavioral consistency,
+  and network independence.
+
+  The SRS operates on a 0.0 to 1.0 scale where 1.0 represents highest
+  trust. The score is not visible to the seller but feeds into listing
+  visibility, search ranking, badge eligibility, and the listing
+  integrity scoring model (CTRL-MISPRINT-001). Accounts with SRS below
+  0.4 trigger enhanced monitoring. Accounts below 0.2 trigger manual
+  review and potential enforcement action.
+
+  The model is designed to be robust against gaming. Raw transaction
+  count and star rating percentage are intentionally low-weighted
+  because they are the easiest metrics to farm. Transaction diversity
+  and network independence are high-weighted because they are
+  structurally difficult to fake at scale.
+
+covered_threat_categories:
+  - reputation_manipulation
+  - coordinated_inauthentic_behavior
+  - trust_exploitation
+  - fraud_enablement
+  - account_sale
+
+covered_surfaces:
+  - seller_ratings
+  - buyer_trust_signals
+  - review_system
+  - search_ranking
+  - badge_qualification
+  - transaction_history
+
+input_signals:
+  transaction_diversity:
+    weight: 0.30
+    signals:
+      - name: "Unique buyer ratio"
+        description: "Percentage of the seller's transactions involving unique buyer accounts"
+        scoring: "1.0 if > 90% unique buyers; 0.5 if 50-90%; 0.2 if < 50%"
+
+      - name: "Value distribution spread"
+        description: "Standard deviation of transaction values. Healthy sellers have diverse value ranges."
+        scoring: "High score for wide distribution (sells $5 and $500 items). Low score for narrow distribution (all transactions $1-5)."
+
+      - name: "Category diversity"
+        description: "Number of distinct item categories the seller has transacted in"
+        scoring: "Higher diversity = higher score. Single-category sellers are not penalized but don't receive the diversity bonus."
+
+      - name: "Temporal distribution"
+        description: "Transactions spread across time vs. concentrated in bursts"
+        scoring: "Penalty for burst patterns (20+ transactions in 24 hours) without corresponding listing volume increase"
+
+  network_independence:
+    weight: 0.25
+    signals:
+      - name: "Counterparty independence"
+        description: "Degree to which the seller's transaction counterparties are independent entities rather than members of the same network"
+        scoring: "Graph analysis: penalize if > 30% of counterparties share device, IP, payment, or behavioral fingerprints"
+
+      - name: "Reciprocal transaction rate"
+        description: "Percentage of the seller's buyers who are also the seller's sellers (buy-sell loops)"
+        scoring: "1.0 if < 5% reciprocal; 0.3 if 5-20%; 0.1 if > 20%"
+
+      - name: "Cluster membership"
+        description: "Whether the seller is part of an identified transaction cluster with high internal density"
+        scoring: "0.0 if part of a flagged cluster; 0.8 if not"
+
+  behavioral_consistency:
+    weight: 0.25
+    signals:
+      - name: "Login pattern stability"
+        description: "Consistency of login devices, locations, and times over the account's lifetime"
+        scoring: "Penalize sudden changes that may indicate account sale or compromise"
+
+      - name: "Listing behavior continuity"
+        description: "Consistency of listing categories, pricing patterns, and description style"
+        scoring: "Penalize sudden shifts (e.g., account sells $2 cards for 6 months then lists a $5,000 item)"
+
+      - name: "Communication style consistency"
+        description: "Language, response time, and message style compared to the account's historical baseline"
+        scoring: "Penalize significant style changes that may indicate account transfer"
+
+      - name: "Payout method stability"
+        description: "Frequency of payout method changes"
+        scoring: "Penalize frequent changes; weight heavily if payout change follows a login anomaly"
+
+  account_fundamentals:
+    weight: 0.20
+    signals:
+      - name: "Account age"
+        description: "Time since account creation, weighted by activity density"
+        scoring: "Logarithmic scale: rapid early score growth that plateaus after 12 months"
+
+      - name: "Identity verification level"
+        description: "Whether the seller has completed platform identity verification"
+        scoring: "Verified = bonus; unverified after 90 days of selling = penalty"
+
+      - name: "Dispute rate"
+        description: "Percentage of transactions resulting in buyer disputes, chargebacks, or returns"
+        scoring: "1.0 if < 2%; 0.5 if 2-5%; 0.2 if > 5%"
+
+      - name: "MFA enrollment"
+        description: "Whether the account has multi-factor authentication enabled"
+        scoring: "Enrolled = bonus (indicates security-conscious legitimate user)"
+
+enforcement_points:
+  - threshold: "srs >= 0.8"
+    action: "Full platform privileges. Eligible for Top Seller badge. Priority search ranking."
+    label: "High trust"
+
+  - threshold: "srs >= 0.6"
+    action: "Standard privileges. Eligible for basic seller badges."
+    label: "Standard trust"
+
+  - threshold: "srs >= 0.4"
+    action: "Standard privileges but ineligible for badges. Listings not boosted in search."
+    label: "Developing trust"
+
+  - threshold: "srs >= 0.2"
+    action: "Enhanced monitoring. Listings reviewed before publication for items > $200. Transaction holds on high-value sales."
+    label: "Low trust — elevated review"
+
+  - threshold: "srs < 0.2"
+    action: "Manual review triggered. Selling privileges may be suspended pending investigation. Existing listings hidden from search."
+    label: "Minimal trust — investigation"
+
+owner: "Trust & Safety Engineering"
+
+maturity: operational
+
+status: active
+
+tuning_history:
+  - date: "2024-07-20"
+    change: "Initial deployment with transaction diversity and account fundamentals only"
+  - date: "2024-10-15"
+    change: "Added network independence signals after identifying farming rings that passed diversity checks"
+  - date: "2025-01-08"
+    change: "Added behavioral consistency signals to detect account sales"
+  - date: "2025-02-20"
+    change: "Increased network independence weight from 0.20 to 0.25; reduced account fundamentals from 0.25 to 0.20"
+
+related_metrics:
+  - metric: "farming_ring_detection_rate"
+    description: "Percentage of confirmed reputation farming networks flagged by SRS before scam execution"
+    current_value: "64%"
+    target: ">60%"
+
+  - metric: "badge_integrity_rate"
+    description: "Percentage of Top Seller badge holders with SRS > 0.8 on genuine transaction patterns"
+    current_value: "96%"
+    target: ">95%"
+
+  - metric: "false_restriction_rate"
+    description: "Percentage of sellers restricted by SRS who are confirmed legitimate on appeal"
+    current_value: "8%"
+    target: "<10%"
+
+  - metric: "account_sale_detection_rate"
+    description: "Percentage of account ownership changes detected through behavioral discontinuity"
+    current_value: "38%"
+    target: ">40%"

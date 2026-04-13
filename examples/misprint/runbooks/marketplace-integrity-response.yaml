@@ -1,0 +1,214 @@
+id: RUN-MISPRINT-001
+name: "Marketplace Integrity Response"
+version: "2.1"
+last_updated: "2025-03-25"
+owner: "Trust & Safety Lead"
+status: active
+
+description: >
+  End-to-end response procedure for marketplace manipulation events
+  including price inflation schemes, reputation farming networks,
+  coordinated inauthentic behavior, and account takeover with
+  collection liquidation. This runbook covers detection triage,
+  investigation, containment, remediation, and post-incident review.
+
+severity_classification:
+  critical:
+    criteria:
+      - "Active account takeover with collection liquidation in progress"
+      - "Coordinated manipulation affecting 50+ listings or $100,000+ in market value"
+      - "Price index contamination affecting a top-100 traded item"
+    response_sla: "15 minutes to begin triage"
+  high:
+    criteria:
+      - "Confirmed reputation farming network with 10+ accounts"
+      - "Price manipulation scheme affecting $10,000-$100,000 in market value"
+      - "Account takeover detected post-liquidation (recovery mode)"
+    response_sla: "1 hour to begin triage"
+  medium:
+    criteria:
+      - "Suspected manipulation requiring investigation"
+      - "Single seller with anomalous listing patterns"
+      - "Isolated reputation farming signals"
+    response_sla: "4 hours to begin triage"
+
+trigger_conditions:
+  automated_triggers:
+    - source: "Listing Integrity Score (CTRL-MISPRINT-001)"
+      condition: "3+ listings from different sellers flagged as high-confidence manipulation within 24 hours for the same item category"
+      severity: "high"
+
+    - source: "Seller Reputation Score (CTRL-MISPRINT-002)"
+      condition: "Cluster of 5+ accounts identified with SRS < 0.2 and high internal transaction density"
+      severity: "high"
+
+    - source: "Authentication monitoring"
+      condition: "Credential stuffing velocity threshold exceeded against accounts with collection value > $5,000"
+      severity: "critical"
+
+    - source: "Account change monitoring"
+      condition: "Payout method change + bulk listing creation within 30 minutes on a high-value account"
+      severity: "critical"
+
+  manual_triggers:
+    - source: "Buyer report"
+      condition: "Multiple buyer reports of suspected fake listings or price manipulation for the same item within 48 hours"
+      severity: "medium"
+
+    - source: "Analyst escalation"
+      condition: "Trust & Safety analyst identifies suspicious pattern during routine monitoring"
+      severity: "varies"
+
+investigation_steps:
+  step_1:
+    name: "Initial triage and scope assessment"
+    time_target: "15-30 minutes"
+    actions:
+      - "Identify the trigger source and confirm the alert is not a known false positive pattern"
+      - "Determine the manipulation type: price inflation, reputation farming, account takeover, or hybrid"
+      - "Estimate the scope: number of accounts involved, number of affected listings, estimated market value impact"
+      - "Assign severity level based on the classification criteria above"
+      - "Open incident channel and notify the on-call Trust & Safety lead"
+
+  step_2:
+    name: "Account and network mapping"
+    time_target: "1-2 hours"
+    actions:
+      - "Run graph analysis on the identified accounts to map the full network of connected entities"
+      - "Identify shared attributes: device fingerprints, IP addresses, payment methods, email domains, registration timing"
+      - "For ATO cases: identify the compromised account(s), the attacker's entry point, and any accomplice accounts receiving transferred items"
+      - "Pull transaction history for all network members to establish the timeline and pattern of manipulation"
+      - "Cross-reference with previously identified networks to determine if this is a new operation or a resurgence of a known group"
+
+  step_3:
+    name: "Evidence collection and documentation"
+    time_target: "concurrent with step 2"
+    actions:
+      - "Screenshot all relevant listings, transactions, account details, and network visualizations"
+      - "Export transaction data for the identified network"
+      - "Document the manipulation pattern with specific examples and evidence"
+      - "Record the timeline of events from first observed activity to detection"
+      - "Log all investigation actions and findings in the incident case file"
+
+  step_4:
+    name: "Impact assessment"
+    time_target: "30 minutes after network mapping"
+    actions:
+      - "Calculate the estimated financial impact: total value of manipulated transactions, estimated buyer harm"
+      - "Assess price index contamination: how many items have their market price influenced by the manipulated data"
+      - "Identify affected legitimate buyers: anyone who purchased items at inflated prices or from farmed-reputation sellers"
+      - "For ATO cases: inventory all items sold, transferred, or listed from the compromised account"
+      - "Determine whether the manipulation has been reported by external parties (media, regulatory, law enforcement)"
+
+containment_steps:
+  immediate_containment:
+    name: "Stop active harm"
+    time_target: "Execute within 30 minutes of confirmed manipulation"
+    actions:
+      - "Suspend selling privileges for all identified network accounts"
+      - "Remove or suppress all flagged listings from search results and the marketplace"
+      - "Exclude all transactions from the identified network from the price index and historical pricing calculations"
+      - "For ATO cases: lock the compromised account, revoke all active sessions, and place a hold on pending transactions and payouts"
+      - "For ATO cases: pause sale of any items that were listed from the compromised account after the estimated compromise time"
+
+  extended_containment:
+    name: "Prevent recurrence and expansion"
+    time_target: "Execute within 4 hours"
+    actions:
+      - "Block device fingerprints, IP ranges, and payment methods associated with the network from creating new accounts"
+      - "Apply enhanced monitoring to item categories affected by the manipulation to catch replacement accounts"
+      - "For ATO cases: initiate buyer notification for anyone who purchased items from the compromised account during the attack window"
+      - "Review and clean the price index: recalculate market averages excluding all contaminated transactions"
+      - "Notify the payment processing team to flag pending payouts to network accounts for review"
+
+remediation_steps:
+  - name: "Buyer remediation"
+    actions:
+      - "Identify all buyers who purchased items at manipulated prices or from fraudulent sellers"
+      - "Offer full refund or return facilitation for affected transactions"
+      - "Send clear, specific communication explaining what happened and what remediation is available"
+      - "For ATO cases: work with buyers who purchased from the compromised account to return items to the legitimate owner"
+
+  - name: "Victim account restoration (ATO)"
+    actions:
+      - "Reset all credentials and require identity verification for account recovery"
+      - "Restore account settings to pre-compromise state"
+      - "Assist with recovery of items sold or transferred during the compromise"
+      - "Apply credit or compensation for any unrecoverable losses"
+      - "Enable MFA on the account and recommend passkey enrollment"
+
+  - name: "Price index restoration"
+    actions:
+      - "Recalculate all affected market prices excluding contaminated transactions"
+      - "Publish a note on affected item pages if the price history shows a material correction"
+      - "Monitor affected items for 30 days to ensure prices stabilize to genuine market levels"
+
+  - name: "Enforcement actions"
+    actions:
+      - "Permanently ban all accounts confirmed as part of the manipulation network"
+      - "File law enforcement referral if estimated harm exceeds $50,000 or involves 100+ victims"
+      - "Document the network's TTPs for the intelligence library to improve future detection"
+
+communication_requirements:
+  internal:
+    - audience: "Trust & Safety team"
+      channel: "#marketplace-integrity"
+      timing: "Immediate upon incident declaration"
+      content: "Incident summary, severity, scope, and assigned roles"
+
+    - audience: "Engineering"
+      channel: "#engineering-security"
+      timing: "Within 1 hour if technical containment actions are needed"
+      content: "Specific actions needed (account locks, IP blocks, index recalculation)"
+
+    - audience: "Executive leadership"
+      channel: "Email + Slack DM to VP"
+      timing: "Within 4 hours for critical; 24 hours for high"
+      content: "Impact summary, containment status, estimated buyer harm, and remediation plan"
+
+  external:
+    - audience: "Affected buyers"
+      channel: "Platform notification + email"
+      timing: "Within 24 hours of confirmed buyer impact"
+      content: "What happened (in clear, non-technical language), how they are affected, what remediation is available, and how to contact support"
+
+    - audience: "Compromised account owner (ATO)"
+      channel: "Verified email + phone"
+      timing: "Immediately upon confirmed ATO"
+      content: "Account has been secured, how to regain access, what happened to their items, and recovery steps"
+
+exit_criteria:
+  - "All accounts in the manipulation network are suspended or banned"
+  - "All contaminated transactions are excluded from the price index"
+  - "All affected buyers have been notified and offered remediation"
+  - "For ATO: compromised account is restored and secured with MFA"
+  - "Post-incident review is scheduled within 5 business days"
+  - "Intelligence artifacts (intel cards, control tuning updates) are filed"
+
+post_incident:
+  - "Conduct blameless post-incident review within 5 business days"
+  - "Update relevant intel cards with new TTPs observed"
+  - "Tune CTRL-MISPRINT-001 and CTRL-MISPRINT-002 based on what the models caught and missed"
+  - "File postmortem documenting timeline, impact, response effectiveness, and improvement actions"
+  - "Track all improvement actions to completion with owners and due dates"
+
+related_controls:
+  - "controls/listing-integrity-scoring.yaml"
+  - "controls/seller-reputation-scoring.yaml"
+
+related_metrics:
+  - metric: "mean_time_to_contain"
+    description: "Median time from incident declaration to active harm stopped"
+    target: "<2 hours for critical, <8 hours for high"
+
+  - metric: "buyer_remediation_rate"
+    description: "Percentage of affected buyers who receive remediation within 48 hours"
+    target: ">90%"
+
+  - metric: "price_index_restoration_time"
+    description: "Time from containment to price index recalculation complete"
+    target: "<24 hours"
+
+  - metric: "false_containment_rate"
+    description: "Percentage of containment actions reversed because the target was legitimate"
+    target: "<5%"
