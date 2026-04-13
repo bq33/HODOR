@@ -1,0 +1,246 @@
+# HODOR Intelligence Index — CatchBack Transaction Platform
+#
+# Master cross-reference linking all intel cards, controls, and runbooks.
+# Every artifact is connected. No orphan objects.
+# Focus: transaction risk, payouts, and financial fraud.
+
+environment:
+  name: "CatchBack-Style Collectibles Transaction Platform"
+  type: example
+  description: >
+    A fictional but realistic peer-to-peer collectibles marketplace with
+    integrated payment processing and instant payouts. Models the financial
+    abuse patterns specific to platforms that handle money movement:
+    account takeover for cash-out, coordinated fake transaction networks
+    designed to extract payout funds, and rapid asset transfers used for
+    laundering.
+
+threats:
+
+  account-takeover-liquidation:
+    id: INTEL-CATCHBACK-001
+    title: "Account Takeover for Asset Liquidation and Cash-Out"
+    severity: critical
+    status: active
+    intel_card: "intel-cards/account-takeover-liquidation.yaml"
+    summary: >
+      Credential stuffing and session hijacking targeting accounts with
+      stored balance or high-value inventory for rapid liquidation and
+      payout extraction. Average loss per successful cash-out: $2,800.
+    attack_patterns:
+      - targeted_credential_stuffing
+      - session_token_theft
+      - payout_method_swap
+      - fire_sale_liquidation
+      - account_lockout_escalation
+    detected_by:
+      - control: "controls/risk-based-authentication.yaml"
+        coverage: full
+        description: "Login risk scoring, session continuity monitoring, and step-up challenges prevent most ATO attempts"
+      - control: "controls/transaction-risk-scoring.yaml"
+        coverage: partial
+        description: "Below-market liquidation listings and rapid payout patterns detected, but only after account access is already gained"
+    responded_with:
+      - runbook: "runbooks/financial-abuse-response.yaml"
+        trigger: "Session terminated due to critical risk or payout initiated from suspicious session"
+    key_metrics:
+      - "ato_success_rate (current: 2.1% no-MFA; target: <1% overall)"
+      - "ato_cash_out_prevention_rate (current: 58%; target: >80%)"
+      - "mean_time_to_detect_ato (current: 47 min; target: <15 min)"
+      - "average_loss_per_ato (current: $2,800; target: <$1,000)"
+
+  payout-fraud:
+    id: INTEL-CATCHBACK-002
+    title: "Payout Fraud via Coordinated Fake Transactions"
+    severity: critical
+    status: active
+    intel_card: "intel-cards/payout-fraud-fake-transactions.yaml"
+    summary: >
+      Coordinated account networks conduct fake purchases to generate
+      payout-eligible transaction volume. Funded by stolen cards and
+      promotional credits. Average ring extraction: $15,000-$40,000.
+      Chargeback rate approaching processor 1% threshold.
+    attack_patterns:
+      - buyer_seller_collusion
+      - stolen_card_funding
+      - promotional_credit_exploitation
+      - payout_velocity_maximization
+      - chargeback_timing_arbitrage
+    detected_by:
+      - control: "controls/transaction-risk-scoring.yaml"
+        coverage: full
+        description: "Graph analysis, reciprocity detection, and cluster identification catch coordinated fake transaction networks"
+      - control: "controls/risk-based-authentication.yaml"
+        coverage: partial
+        description: "Shared infrastructure signals on ring accounts detected during login, but does not directly address transaction fraud"
+    responded_with:
+      - runbook: "runbooks/financial-abuse-response.yaml"
+        trigger: "Transaction suspended with TRS >= 0.75 or 3+ cluster transactions flagged in 24 hours"
+    key_metrics:
+      - "fraud_ring_detection_rate (current: 52%; target: >75%)"
+      - "payout_fraud_loss_rate (current: 0.38%; target: <0.15%)"
+      - "chargeback_rate (current: 0.87%; target: <0.65%)"
+      - "mean_time_to_detect_ring (current: 6.2 days; target: <3 days)"
+
+  transfer-laundering:
+    id: INTEL-CATCHBACK-003
+    title: "Rapid Transfer Laundering via Linked Accounts"
+    severity: high
+    status: active
+    intel_card: "intel-cards/rapid-transfer-laundering.yaml"
+    summary: >
+      Multi-hop asset transfers through linked accounts to obscure
+      provenance of stolen goods and launder proceeds. Exploits trade
+      and gift features that have fewer risk controls than sales.
+      Law enforcement information requests up 3x YoY.
+    attack_patterns:
+      - multi_hop_asset_transfer
+      - trade_to_sale_conversion
+      - balance_layering
+      - structuring_below_thresholds
+      - dormant_account_activation
+    detected_by:
+      - control: "controls/transaction-risk-scoring.yaml"
+        coverage: partial
+        description: "Transfer chain length and velocity signals detect multi-hop patterns, but trade-specific signals are still maturing"
+      - control: "controls/risk-based-authentication.yaml"
+        coverage: partial
+        description: "Dormant account reactivation detected at login, but does not monitor transfer patterns"
+    detection_gaps:
+      - gap: "Trade and gift features have weaker risk controls than sales"
+        priority: critical
+        remediation: "Extend full TRS scoring to trades and transfers (in progress)"
+      - gap: "Asset provenance tracking is incomplete"
+        priority: high
+        remediation: "Build chain-of-custody log for all assets with provenance surfaced to buyers and risk scoring"
+      - gap: "SAR filing process is manual and inconsistent"
+        priority: critical
+        remediation: "Automate SAR evaluation triggers when transfer patterns meet regulatory thresholds"
+    responded_with:
+      - runbook: "runbooks/financial-abuse-response.yaml"
+        trigger: "Asset transferred 3+ times in 72 hours through accounts with shared infrastructure"
+    key_metrics:
+      - "transfer_laundering_detection_rate (current: 34%; target: >60%)"
+      - "trade_to_sale_conversion_flag_rate (current: 22%; target: >70%)"
+      - "law_enforcement_request_volume (current: 28/month, 3x YoY)"
+      - "sar_filing_compliance_rate (current: 76%; target: >95%)"
+
+controls:
+
+  risk-based-authentication:
+    id: CTRL-CATCHBACK-001
+    name: "Risk-Based Authentication"
+    file: "controls/risk-based-authentication.yaml"
+    maturity: operational
+    status: active
+    addresses_threats:
+      - "account-takeover-liquidation (full coverage)"
+      - "payout-fraud (partial — shared infrastructure signals on ring accounts)"
+      - "transfer-laundering (partial — dormant account reactivation detection)"
+    signal_categories:
+      - login_risk_signals (weight: 0.40)
+      - session_risk_signals (weight: 0.35)
+      - contextual_signals (weight: 0.25)
+    key_metrics:
+      - "ato_prevention_rate (current: 76%; target: >85%)"
+      - "step_up_challenge_rate (current: 8.3%; target: <12%)"
+      - "false_challenge_rate (current: 9%; target: <10%)"
+
+  transaction-risk-scoring:
+    id: CTRL-CATCHBACK-002
+    name: "Transaction Risk Scoring"
+    file: "controls/transaction-risk-scoring.yaml"
+    maturity: operational
+    status: active
+    addresses_threats:
+      - "payout-fraud (full coverage)"
+      - "transfer-laundering (partial — trade signals maturing)"
+      - "account-takeover-liquidation (partial — detects liquidation patterns)"
+    signal_categories:
+      - transaction_level (weight: 0.25)
+      - relationship_level (weight: 0.35)
+      - network_level (weight: 0.40)
+    key_metrics:
+      - "fraud_ring_detection_rate (current: 52%; target: >75%)"
+      - "payout_hold_precision (current: 38%; target: >50%)"
+      - "false_hold_rate (current: 4.1%; target: <5%)"
+      - "fraud_loss_rate (current: 0.42%; target: <0.25%)"
+
+runbooks:
+
+  financial-abuse-response:
+    id: RUN-CATCHBACK-001
+    name: "Financial Abuse Response"
+    file: "runbooks/financial-abuse-response.yaml"
+    status: active
+    addresses_threats:
+      - account-takeover-liquidation
+      - payout-fraud
+      - transfer-laundering
+    trigger_sources:
+      - "CTRL-CATCHBACK-001 (critical risk session termination)"
+      - "CTRL-CATCHBACK-002 (transaction suspension, cluster alerts)"
+      - "Payout monitoring (new method + payout pattern)"
+      - "Transfer monitoring (multi-hop velocity)"
+      - "Chargeback monitoring (cluster chargeback rate)"
+      - "User reports and law enforcement requests"
+    key_metrics:
+      - "mean_time_to_freeze (target: <15 min for critical)"
+      - "fund_recovery_rate (target: >60%)"
+      - "victim_remediation_time (target: <24 hours)"
+      - "regulatory_compliance_rate (target: 100%)"
+
+coverage_summary:
+  total_threats: 3
+  total_controls: 2
+  total_runbooks: 1
+
+  coverage_matrix:
+    account-takeover-liquidation:
+      prevention: "full (RBA)"
+      detection: "full (RBA + TRS)"
+      response: covered
+      gaps:
+        - "Session token theft via infostealers bypasses all credential-based defenses (high priority)"
+        - "Instant payout collapses detection window to minutes (critical)"
+    payout-fraud:
+      prevention: "partial (TRS payout holds)"
+      detection: "full (TRS graph + cluster analysis)"
+      response: covered
+      gaps:
+        - "Detection speed (6.2 days mean) allows significant extraction before intervention (critical)"
+        - "Promotional credit exploitation vector not yet controlled (medium)"
+    transfer-laundering:
+      prevention: "partial (velocity limits planned)"
+      detection: "partial (trade signals maturing)"
+      response: covered
+      gaps:
+        - "Trade and gift features lack full risk scoring (critical — in progress)"
+        - "No asset provenance tracking (high)"
+        - "SAR filing process is manual and inconsistent (critical)"
+
+  priority_gaps:
+    - threat: transfer-laundering
+      gap: "Trade and gift features lack full transaction risk scoring"
+      priority: critical
+      status: "In progress — targeted for Q2 2025 deployment"
+
+    - threat: account-takeover-liquidation
+      gap: "Session token theft via infostealers bypasses credential-based defenses"
+      priority: high
+      status: "Evaluating session binding and continuous device attestation solutions"
+
+    - threat: payout-fraud
+      gap: "Mean time to detect fraud rings is 6.2 days, allowing $15-40K extraction per ring"
+      priority: critical
+      status: "Tuning TRS network-level signals to reduce detection time"
+
+    - threat: transfer-laundering
+      gap: "SAR filing evaluation is manual, achieving only 76% compliance rate"
+      priority: critical
+      status: "Automating SAR trigger evaluation for Q2 2025"
+
+    - threat: account-takeover-liquidation
+      gap: "Instant payout reduces intervention window to minutes"
+      priority: critical
+      status: "Policy change to restrict instant payout eligibility under review"

@@ -1,0 +1,216 @@
+id: INTEL-CATCHBACK-002
+title: "Payout Fraud via Coordinated Fake Transactions"
+
+summary: >
+  Networks of accounts controlled by the same operator conduct fake
+  purchases between each other to generate the appearance of legitimate
+  commerce. The seller accounts then request payout of the sale proceeds.
+  Because the transactions involve no genuine exchange of goods, the
+  operator extracts funds from the platform's payment system with zero
+  cost of goods. The fraud exploits the gap between when the platform
+  releases payout to the seller and when the buyer's payment method is
+  charged or settled. In some variants, the buyer disputes the charge
+  after the seller has already been paid, resulting in the platform
+  absorbing both the payout and the chargeback.
+
+date_first_seen: "2024-05-22"
+date_last_updated: "2025-03-30"
+
+status: active
+
+intelligence_type: threat_pattern
+
+severity: critical
+
+threat_categories:
+  - payout_fraud
+  - coordinated_inauthentic_behavior
+  - payment_abuse
+  - money_laundering
+  - chargeback_fraud
+
+source_ids:
+  - "SRC-INT-001: Internal fraud operations case log"
+  - "SRC-INT-003: Payment processing dispute data"
+  - "SRC-EXT-003: Payment processor risk intelligence feed"
+  - "SRC-EXT-004: Industry chargeback pattern database"
+
+source_confidence: high
+
+internal_relevance: >
+  Direct financial loss to the platform through unrecoverable payouts
+  backed by fraudulent transactions. Average fraud ring extracts
+  $15,000-$40,000 before detection. Chargeback rates from fraud ring
+  activity threaten the platform's payment processor relationship.
+  Processor has flagged the platform's chargeback rate as approaching
+  the 1% threshold that triggers enhanced monitoring and potential
+  processing restrictions.
+
+affected_surfaces:
+  - transaction_system:
+      description: "Fake purchases create records that appear legitimate in the transaction ledger"
+      risk: "Transaction data integrity compromised; fraud indistinguishable from genuine commerce without graph analysis"
+  - payout_system:
+      description: "Sale proceeds from fake transactions paid out to attacker-controlled bank accounts"
+      risk: "Direct financial loss; funds irrecoverable once ACH or instant payout completes"
+  - payment_processing:
+      description: "Buyer accounts use stolen credit cards or subsequently dispute legitimate charges"
+      risk: "Chargeback losses; processor relationship risk if chargeback rate exceeds thresholds"
+  - seller_trust_signals:
+      description: "Fake transactions generate seller ratings and transaction history"
+      risk: "Fraudulent reputation used to scam legitimate buyers in parallel"
+  - platform_balance:
+      description: "Promotional credits, referral bonuses, or stored balance used as buyer-side funding for fake transactions"
+      risk: "Platform subsidizes the fraud through its own promotional programs"
+
+tactics:
+  - name: "Buyer-seller collusion network"
+    description: >
+      The operator creates 10-30 accounts split between buyer and seller
+      roles. Seller accounts list items (often real items they never intend
+      to ship, or digital goods that don't require physical delivery). Buyer
+      accounts purchase these items using stolen credit cards, prepaid cards
+      funded with stolen funds, or promotional credits. The transaction
+      appears legitimate: a buyer purchased from a seller, the item is
+      marked as shipped (fake tracking numbers or digital delivery), and
+      the seller requests payout.
+
+  - name: "Stolen card funding"
+    description: >
+      Buyer accounts are funded with stolen credit card numbers obtained
+      from dark web carding shops. Each card is used for 1-3 transactions
+      to stay below fraud detection thresholds. The cardholder eventually
+      disputes the charge, but by then the seller payout has already
+      been processed. The platform absorbs the chargeback plus the payout.
+
+  - name: "Promotional credit exploitation"
+    description: >
+      New buyer accounts are created to harvest sign-up bonuses, referral
+      credits, and promotional offers. These credits fund the buyer side
+      of fake transactions, converting promotional value into real payouts
+      on the seller side. A $20 sign-up bonus across 50 fake accounts
+      generates $1,000 in payout-eligible transaction volume at zero cost
+      to the operator.
+
+  - name: "Payout velocity maximization"
+    description: >
+      The operator structures transactions to hit payout eligibility
+      thresholds as quickly as possible. If the platform requires 3
+      completed transactions before payout eligibility, the ring executes
+      exactly 3 small transactions, then one large transaction that
+      maximizes the payout. Shipping is confirmed (with fake or recycled
+      tracking numbers) within hours to accelerate the hold release.
+
+  - name: "Chargeback timing arbitrage"
+    description: >
+      The operator times buyer disputes to land after the seller payout
+      has cleared. Credit card disputes typically take 30-60 days to
+      process. If the platform pays sellers within 3-5 days of confirmed
+      delivery, there is a 25-55 day window where the platform has paid
+      the seller but hasn't yet received the chargeback. The operator
+      withdraws payout funds and abandons the seller account before the
+      chargeback hits.
+
+indicators:
+  - "Cluster of buyer and seller accounts sharing device fingerprints, IP subnets, or payment infrastructure"
+  - "Seller accounts with 80%+ of transactions from buyers with account age < 30 days"
+  - "Transactions where buyer and seller are in the same geographic location but item is listed as 'shipped'"
+  - "Tracking numbers that resolve to unrelated shipments, show delivery to a different address, or are recycled across multiple transactions"
+  - "Payout requested within 24 hours of first eligible transaction on a new seller account"
+  - "Buyer accounts using prepaid cards, virtual card numbers, or cards with billing addresses that don't match the account profile"
+  - "Transaction values clustered just below review thresholds (e.g., consistently $499 when manual review kicks in at $500)"
+  - "Multiple buyer accounts funding from the same card BIN range or issuing bank"
+  - "Seller shipping confirmation times consistently under 2 hours regardless of item type or buyer location"
+
+recommended_actions:
+  - action: "Deploy transaction risk scoring with graph and velocity analysis"
+    priority: critical
+    description: >
+      Score every transaction using buyer-seller relationship graph,
+      transaction velocity, payment method risk, and behavioral signals.
+      Hold payout for transactions that exceed the risk threshold until
+      manual review clears them.
+    control_ref: "controls/transaction-risk-scoring.yaml"
+
+  - action: "Implement graduated payout holds"
+    priority: critical
+    description: >
+      New seller accounts receive 14-day payout holds for the first
+      $1,000 in transactions. Hold duration decreases as the seller
+      establishes legitimate transaction history with diverse, unrelated
+      buyers. Accounts with risk signals receive extended holds regardless
+      of tenure.
+
+  - action: "Validate shipping confirmation"
+    priority: high
+    description: >
+      Cross-reference tracking numbers against carrier APIs to verify
+      the shipment is real, matches the expected route (seller to buyer
+      address), and has not been used on a previous transaction. Flag
+      digital delivery transactions that bypass shipping verification.
+
+  - action: "Monitor chargeback patterns at the account cluster level"
+    priority: high
+    description: >
+      Track chargebacks not just per account but per device fingerprint,
+      IP cluster, and payment method cluster. A single buyer account's
+      chargeback rate may be below threshold, but the cluster's aggregate
+      rate reveals the fraud ring.
+
+  - action: "Cap promotional credit conversion"
+    priority: medium
+    description: >
+      Limit the percentage of a transaction that can be funded with
+      promotional credits. Require at least 50% of transaction value
+      from a verified payment method to prevent pure credit-to-payout
+      conversion schemes.
+
+owner: "Fraud Operations Lead"
+
+related_controls:
+  - "controls/transaction-risk-scoring.yaml"
+  - "controls/risk-based-authentication.yaml"
+
+related_runbooks:
+  - "runbooks/financial-abuse-response.yaml"
+
+related_metrics:
+  - metric: "fraud_ring_detection_rate"
+    description: "Percentage of coordinated fake transaction networks detected before payout"
+    current: "52%"
+    target: ">75%"
+  - metric: "payout_fraud_loss_rate"
+    description: "Fraud losses from fake transaction payouts as a percentage of total payout volume"
+    current: "0.38%"
+    target: "<0.15%"
+  - metric: "chargeback_rate"
+    description: "Total chargebacks as a percentage of total transaction volume"
+    current: "0.87%"
+    target: "<0.65% (well below processor 1% threshold)"
+  - metric: "mean_time_to_detect_ring"
+    description: "Median time from first ring transaction to detection"
+    current: "6.2 days"
+    target: "<3 days"
+  - metric: "payout_hold_effectiveness"
+    description: "Percentage of fraudulent payouts caught during the hold period"
+    current: "41%"
+    target: ">70%"
+
+notes: >
+  Payout fraud is the most financially damaging threat on the platform
+  because the loss is direct and often irrecoverable. Unlike marketplace
+  manipulation (which damages trust but doesn't directly extract funds),
+  every dollar paid out on a fake transaction is a dollar lost.
+
+  The chargeback rate is approaching a regulatory boundary. If the
+  platform exceeds 1% chargeback rate with its payment processor, it
+  faces increased processing fees, mandatory fraud prevention audits,
+  and potential processing restrictions. This makes payout fraud not
+  just a financial loss problem but an existential risk to the
+  platform's ability to process payments at all.
+
+  The promotional credit exploitation vector is particularly insidious
+  because the platform is effectively funding its own fraud losses
+  through marketing spend. A $20 sign-up bonus designed to acquire a
+  legitimate user instead funds a fake transaction that extracts $20
+  from the payout system. The acquisition cost becomes a fraud loss.

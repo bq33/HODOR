@@ -1,0 +1,213 @@
+id: INTEL-CATCHBACK-003
+title: "Rapid Transfer Laundering via Linked Accounts"
+
+summary: >
+  Operators use networks of linked accounts to rapidly transfer
+  collectible assets and platform balance between accounts in patterns
+  designed to obscure the origin of stolen goods, launder proceeds from
+  off-platform fraud, or extract value through complex chains that make
+  tracing and recovery difficult. The transfers exploit the platform's
+  trade and gift features, which were designed for legitimate peer-to-peer
+  exchange but lack the transaction risk controls applied to sales.
+  Transfer chains typically involve 3-7 hops before the asset is sold
+  to a legitimate buyer or the balance is paid out, creating enough
+  separation that standard per-account monitoring misses the pattern.
+
+date_first_seen: "2024-07-14"
+date_last_updated: "2025-04-02"
+
+status: active
+
+intelligence_type: threat_pattern
+
+severity: high
+
+threat_categories:
+  - money_laundering
+  - asset_laundering
+  - coordinated_inauthentic_behavior
+  - stolen_goods_fencing
+  - structuring
+
+source_ids:
+  - "SRC-INT-001: Internal fraud operations case log"
+  - "SRC-INT-004: Asset transfer monitoring system"
+  - "SRC-EXT-005: Law enforcement information request patterns"
+  - "SRC-EXT-006: Anti-money laundering advisory (FinCEN)"
+
+source_confidence: moderate
+
+internal_relevance: >
+  Creates regulatory exposure under anti-money laundering obligations.
+  Law enforcement information requests related to asset movement have
+  increased 3x year-over-year, indicating the platform is being used
+  as a laundering channel. Transfer laundering also enables other fraud
+  types: ATO-stolen assets are laundered through transfer chains before
+  sale, making recovery more difficult. The platform's trade feature
+  currently has minimal risk controls compared to the sales feature,
+  creating an arbitrage opportunity for bad actors.
+
+affected_surfaces:
+  - trade_system:
+      description: "Peer-to-peer trade feature used to move assets between accounts without triggering sales-side risk controls"
+      risk: "Primary laundering channel; trades receive less scrutiny than sales"
+  - gift_transfer:
+      description: "Gift/transfer feature used to move assets with no consideration, bypassing payment risk scoring entirely"
+      risk: "Zero-friction movement with no payment signal to evaluate"
+  - platform_balance:
+      description: "Stored balance transferred between accounts through buy-sell loops at face value"
+      risk: "Balance laundering converts suspicious funds into clean platform credits"
+  - payout_system:
+      description: "Clean account at the end of the chain initiates payout of laundered proceeds"
+      risk: "Funds extracted through an account with no direct connection to the original fraud"
+  - collection_portfolio:
+      description: "Stolen collectibles pass through multiple portfolios, each hop weakening the provenance trail"
+      risk: "Legitimate buyers unknowingly purchase stolen assets, creating legal liability"
+
+tactics:
+  - name: "Multi-hop asset transfer"
+    description: >
+      Stolen or fraudulently acquired assets are transferred through
+      3-7 accounts in rapid succession, typically completing the full
+      chain within 24-48 hours. Each account in the chain holds the
+      asset briefly before passing it on. The final account in the
+      chain lists the asset for sale to a legitimate buyer, appearing
+      to be the original owner.
+
+  - name: "Trade-to-sale conversion"
+    description: >
+      Assets are moved through the trade system (which has minimal risk
+      controls) to a clean account, then sold through the sales system
+      (which has payment processing and payout). By separating the
+      movement from the monetization, the operator avoids triggering
+      transaction risk scoring on the account that actually held the
+      stolen asset.
+
+  - name: "Balance layering"
+    description: >
+      Platform balance is moved between accounts through buy-sell loops
+      at face value. Account A sells a $100 item to Account B. Account B
+      now has $100 less balance but owns an asset. Account B sells the
+      asset to Account C for $100. The balance has moved from A to C
+      with an asset transfer in between, creating the appearance of
+      legitimate commerce.
+
+  - name: "Structuring below reporting thresholds"
+    description: >
+      Transfers and transactions are deliberately structured to stay
+      below per-transaction review thresholds and per-account cumulative
+      reporting thresholds. Instead of one $5,000 transfer, the operator
+      executes 25 transfers of $200 across 5 account pairs.
+
+  - name: "Dormant account activation"
+    description: >
+      Pre-positioned accounts that were created months earlier and have
+      minimal activity are suddenly activated as transfer nodes. The
+      account age and clean history make them less likely to be flagged
+      by account-level risk models.
+
+indicators:
+  - "Asset transferred 3+ times within 72 hours through accounts with no prior transaction relationship"
+  - "Trade or gift volume spikes on accounts that historically had minimal transfer activity"
+  - "Chain of transfers where each holding period is less than 4 hours"
+  - "Accounts involved in transfer chains that share device fingerprints, IP ranges, or registration timing"
+  - "Assets acquired via trade or gift that are immediately listed for sale (trade-to-sale conversion within 24 hours)"
+  - "Transaction values consistently clustered below review thresholds across a network of related accounts"
+  - "Previously dormant accounts (90+ days inactive) suddenly executing multiple transfers within 48 hours"
+  - "Payout requests from accounts whose balance was primarily acquired through trades rather than direct sales to unrelated buyers"
+
+recommended_actions:
+  - action: "Extend transaction risk scoring to trades and transfers"
+    priority: critical
+    description: >
+      Apply the same graph analysis, velocity monitoring, and behavioral
+      signals to the trade and gift features that are currently applied
+      only to sales. The risk control gap between sales and trades is the
+      primary arbitrage vector.
+    control_ref: "controls/transaction-risk-scoring.yaml"
+
+  - action: "Implement transfer velocity limits"
+    priority: high
+    description: >
+      Cap the number of trades and transfers an account can execute per
+      24-hour period. Legitimate users rarely execute more than 5-10
+      trades per day. Set initial limit at 15 trades/day with escalating
+      review triggers at 10 and 15.
+
+  - action: "Build asset provenance tracking"
+    priority: high
+    description: >
+      Maintain a full chain-of-custody log for every asset on the platform.
+      When an asset is listed for sale, surface the provenance chain to the
+      buyer and to risk scoring. Assets that have passed through 3+ accounts
+      in 7 days receive elevated scrutiny.
+
+  - action: "Apply payout risk scoring based on balance source"
+    priority: high
+    description: >
+      When a payout is requested, evaluate what percentage of the account's
+      balance was sourced from trades/transfers vs. sales to unrelated buyers.
+      Accounts whose balance is primarily trade-sourced receive extended
+      payout holds and manual review.
+
+  - action: "File suspicious activity reports (SARs) for patterns consistent with laundering"
+    priority: critical
+    description: >
+      Establish clear criteria for when transfer patterns trigger SAR
+      filing obligations. Rapid multi-hop transfers above cumulative
+      thresholds, structuring behavior, and dormant account activation
+      should all be evaluated against regulatory reporting requirements.
+
+owner: "Fraud Operations Lead + Compliance"
+
+related_controls:
+  - "controls/transaction-risk-scoring.yaml"
+  - "controls/risk-based-authentication.yaml"
+
+related_runbooks:
+  - "runbooks/financial-abuse-response.yaml"
+
+related_metrics:
+  - metric: "transfer_laundering_detection_rate"
+    description: "Percentage of multi-hop transfer chains identified before final sale or payout"
+    current: "34%"
+    target: ">60%"
+  - metric: "trade_to_sale_conversion_flag_rate"
+    description: "Percentage of trade-acquired assets flagged when listed for sale within 24 hours"
+    current: "22%"
+    target: ">70%"
+  - metric: "law_enforcement_request_volume"
+    description: "Monthly volume of law enforcement information requests related to asset movement"
+    current: "28/month (3x YoY increase)"
+    target: "Decrease indicates platform is less attractive as laundering channel"
+  - metric: "sar_filing_compliance_rate"
+    description: "Percentage of flagged transfer patterns evaluated for SAR filing within required timeframe"
+    current: "76%"
+    target: ">95%"
+  - metric: "asset_recovery_rate"
+    description: "Percentage of laundered assets recovered or frozen before final disposition"
+    current: "19%"
+    target: ">40%"
+
+notes: >
+  Transfer laundering is the threat most likely to attract regulatory
+  attention. FinCEN and international AML regulators are increasingly
+  focused on non-traditional payment platforms and digital asset
+  marketplaces as laundering channels. The platform's trade and gift
+  features, which were built for community engagement, are being
+  exploited as unmonitored value transfer channels.
+
+  The 3x increase in law enforcement information requests is a leading
+  indicator. Law enforcement agencies have identified the platform as
+  a laundering vector, and if the platform cannot demonstrate adequate
+  controls, it risks regulatory enforcement action. This elevates
+  transfer laundering from a fraud operations problem to a board-level
+  compliance risk.
+
+  The fundamental design tension is that trades and gifts are core
+  community features. Applying heavy friction to them degrades the
+  user experience for legitimate collectors who trade frequently. The
+  control strategy must be risk-proportional: low friction for
+  established accounts trading with established counterparties, high
+  friction for new accounts, dormant account reactivation, and rapid
+  multi-hop patterns.

@@ -1,0 +1,158 @@
+id: CTRL-CATCHBACK-002
+name: "Transaction Risk Scoring"
+
+control_family: fraud_detection
+
+objective: >
+  Evaluate every transaction, trade, and transfer on the platform for
+  legitimacy using graph analysis, behavioral signals, velocity
+  monitoring, and payment method risk to identify fraudulent, manipulated,
+  or laundering-related activity before funds are released.
+
+description: >
+  The Transaction Risk Score (TRS) is a real-time composite score
+  assigned to every monetary transaction and asset transfer. Unlike
+  controls that evaluate accounts or listings in isolation, TRS evaluates
+  the relationship between the parties, the context of the transaction,
+  and its position in the broader transaction graph.
+
+  The model operates across three levels. At the transaction level, it
+  evaluates pricing, timing, payment method, and shipping signals. At
+  the relationship level, it evaluates the buyer-seller connection graph,
+  transaction history between the parties, and reciprocity patterns. At
+  the network level, it identifies clusters of coordinated activity,
+  velocity anomalies across account groups, and structuring patterns
+  below reporting thresholds.
+
+  Transactions that exceed the risk threshold trigger graduated responses:
+  payout holds, manual review, transaction reversal, or account suspension
+  depending on confidence and severity. The system is designed to catch
+  coordinated fraud rings (INTEL-CATCHBACK-002) and laundering chains
+  (INTEL-CATCHBACK-003) that are invisible to per-account monitoring.
+
+covered_threat_categories:
+  - payout_fraud
+  - money_laundering
+  - coordinated_inauthentic_behavior
+  - stolen_card_usage
+  - structuring
+  - wash_trading
+  - price_manipulation
+
+covered_surfaces:
+  - transaction_system
+  - payout_system
+  - trade_system
+  - gift_transfer
+  - payment_processing
+  - platform_balance
+
+input_signals:
+  transaction_level:
+    weight: 0.25
+    signals:
+      - name: "Price deviation"
+        description: "Transaction price compared to trailing market average for the item. Below-market (fire sale) and above-market (wash trade) both generate signal."
+
+      - name: "Payment method risk"
+        description: "Risk score of the buyer's payment method. Prepaid cards, virtual cards, newly added cards, and cards with mismatched billing addresses score higher."
+
+      - name: "Shipping verification"
+        description: "Whether tracking number is valid, matches the expected route, has not been used on another transaction, and shows appropriate transit time."
+
+      - name: "Transaction timing"
+        description: "Time of day, day of week, and proximity to payout eligibility thresholds. Transactions clustered just before payout eligibility deadlines are suspicious."
+
+  relationship_level:
+    weight: 0.35
+    signals:
+      - name: "Buyer-seller graph distance"
+        description: "Degree of separation between buyer and seller in the transaction graph. First-time counterparties = lower risk. Accounts with prior reciprocal transactions = higher risk."
+
+      - name: "Reciprocity index"
+        description: "Frequency and value of reverse transactions between the same parties. A buys from B, then B buys from A at similar values = strong fraud ring indicator."
+
+      - name: "Counterparty diversity"
+        description: "What percentage of each party's total transactions involve the other party. High concentration = suspicious."
+
+      - name: "Shared infrastructure"
+        description: "Whether buyer and seller share device fingerprints, IP addresses, payment methods, email domains, or registration timing."
+
+  network_level:
+    weight: 0.40
+    signals:
+      - name: "Cluster membership"
+        description: "Whether either party belongs to an identified transaction cluster with high internal density and low external connectivity."
+
+      - name: "Transfer chain length"
+        description: "For assets: number of ownership transfers in the trailing 7 days. 3+ transfers triggers elevated scoring."
+
+      - name: "Velocity anomaly"
+        description: "Transaction volume and value for the account compared to its baseline. Sudden spikes in activity, especially on previously dormant accounts, generate signal."
+
+      - name: "Structuring detection"
+        description: "Transactions structured to stay below individual review thresholds but exceeding aggregate thresholds when evaluated as a cluster."
+
+      - name: "Payout timing correlation"
+        description: "Whether multiple accounts in a cluster initiate payouts within the same 24-hour window, suggesting coordinated extraction."
+
+enforcement_points:
+  - threshold: "trs < 0.3"
+    action: "Standard processing. No hold. Payout eligible per normal schedule."
+    label: "Low risk"
+
+  - threshold: "trs >= 0.3 AND trs < 0.5"
+    action: "24-hour payout hold. Transaction logged for batch review. Seller can view the hold but cannot expedite."
+    label: "Moderate risk"
+
+  - threshold: "trs >= 0.5 AND trs < 0.75"
+    action: "Payout held until manual review complete. Transaction flagged for analyst review within 4 hours. Buyer payment not yet captured (auth hold only)."
+    label: "High risk"
+
+  - threshold: "trs >= 0.75"
+    action: "Transaction suspended. Payout blocked. Both accounts flagged for investigation. Automated notification to fraud operations. If part of an identified cluster, all cluster accounts flagged simultaneously."
+    label: "Critical risk — suspected fraud"
+
+owner: "Fraud Operations + Security Engineering"
+
+maturity: operational
+
+status: active
+
+tuning_history:
+  - date: "2024-06-01"
+    change: "Initial deployment with transaction-level and basic relationship signals"
+  - date: "2024-09-15"
+    change: "Added network-level signals (cluster detection, transfer chain analysis) after identifying fraud ring that evaded per-account monitoring"
+  - date: "2024-12-01"
+    change: "Extended scoring to trades and transfers (previously sales only) after identifying trade-to-sale laundering pattern"
+  - date: "2025-02-10"
+    change: "Increased network-level weight from 0.30 to 0.40 based on precision analysis showing network signals are the highest-performing signal category for ring detection"
+  - date: "2025-03-28"
+    change: "Added structuring detection signal after identifying ring that deliberately kept transactions below $500 review threshold"
+
+related_metrics:
+  - metric: "fraud_ring_detection_rate"
+    description: "Percentage of coordinated transaction networks detected before payout"
+    current_value: "52%"
+    target: ">75%"
+
+  - metric: "payout_hold_precision"
+    description: "Percentage of held payouts that are confirmed fraudulent on review"
+    current_value: "38%"
+    target: ">50%"
+
+  - metric: "false_hold_rate"
+    description: "Percentage of legitimate transactions held by the model"
+    current_value: "4.1%"
+    target: "<5%"
+
+  - metric: "mean_review_time"
+    description: "Median time from transaction flag to analyst decision"
+    current_value: "3.8 hours"
+    target: "<4 hours"
+
+  - metric: "fraud_loss_rate"
+    description: "Total fraud losses as percentage of gross merchandise volume"
+    current_value: "0.42%"
+    target: "<0.25%"

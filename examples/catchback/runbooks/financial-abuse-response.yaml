@@ -1,0 +1,237 @@
+id: RUN-CATCHBACK-001
+name: "Financial Abuse Response"
+version: "1.4"
+last_updated: "2025-03-30"
+owner: "Fraud Operations Lead"
+status: active
+
+description: >
+  End-to-end incident response procedure for financial abuse events
+  including account takeover with cash-out, payout fraud via coordinated
+  fake transactions, and suspicious transfer patterns indicative of
+  laundering. This runbook prioritizes speed of containment because
+  financial abuse has irreversible consequences once funds leave the
+  platform.
+
+severity_classification:
+  critical:
+    criteria:
+      - "Active ATO with payout initiation in progress"
+      - "Coordinated fraud ring with aggregate exposure > $10,000"
+      - "Instant payout triggered from a session with risk score > 0.6"
+    response_sla: "10 minutes to begin containment"
+  high:
+    criteria:
+      - "Confirmed fraud ring detected but payout not yet initiated"
+      - "ATO detected post-compromise but before full liquidation"
+      - "Transfer pattern matching known laundering typology with cumulative value > $5,000"
+    response_sla: "30 minutes to begin containment"
+  medium:
+    criteria:
+      - "Suspicious transaction cluster requiring investigation"
+      - "Elevated chargeback rate from a seller account"
+      - "Transfer velocity anomaly on an individual account"
+    response_sla: "4 hours to begin investigation"
+
+trigger_conditions:
+  automated_triggers:
+    - source: "Risk-Based Authentication (CTRL-CATCHBACK-001)"
+      condition: "Session terminated due to critical risk score (>= 0.85) on account with stored balance > $500"
+      severity: critical
+
+    - source: "Transaction Risk Scoring (CTRL-CATCHBACK-002)"
+      condition: "Transaction suspended with TRS >= 0.75 involving payout-eligible funds"
+      severity: critical
+
+    - source: "Transaction Risk Scoring (CTRL-CATCHBACK-002)"
+      condition: "3+ transactions in same cluster flagged within 24 hours"
+      severity: high
+
+    - source: "Payout monitoring"
+      condition: "Payout initiated to a payout method added within the last 48 hours on an account with recent risk signals"
+      severity: critical
+
+    - source: "Transfer monitoring"
+      condition: "Asset transferred 3+ times within 72 hours through accounts with shared infrastructure signals"
+      severity: high
+
+    - source: "Chargeback monitoring"
+      condition: "5+ chargebacks received within 7 days linked to a single seller or seller cluster"
+      severity: high
+
+  manual_triggers:
+    - source: "User report"
+      condition: "Account owner reports unauthorized access or transactions they did not initiate"
+      severity: critical
+
+    - source: "Payment processor alert"
+      condition: "Processor flags elevated chargeback rate or suspicious transaction pattern"
+      severity: high
+
+    - source: "Law enforcement request"
+      condition: "Law enforcement agency requests information about accounts involved in financial crime"
+      severity: high
+
+investigation_steps:
+  step_1:
+    name: "Immediate triage and threat classification"
+    time_target: "5-10 minutes"
+    actions:
+      - "Identify the trigger source and classify the threat type: ATO cash-out, payout fraud ring, or transfer laundering"
+      - "For ATO: determine whether funds have already been paid out. If payout is pending or in progress, proceed immediately to containment"
+      - "For fraud rings: identify the scope — how many accounts, how much transaction volume, how much payout exposure"
+      - "For laundering: identify the chain length and whether assets have reached a final sale or payout stage"
+      - "Assign severity and open incident channel"
+
+  step_2:
+    name: "Account and network mapping"
+    time_target: "30-60 minutes"
+    actions:
+      - "Run graph analysis to map all connected accounts (shared devices, IPs, payment methods, email patterns, transaction relationships)"
+      - "For ATO: identify the attacker's entry point (credential stuffing, phishing, session theft), all actions taken on the compromised account, and any accomplice accounts"
+      - "For fraud rings: map the complete buyer-seller network, identify the funding sources (stolen cards, promotional credits, platform balance), and calculate total exposure"
+      - "For laundering: trace the full transfer chain from origin to current position, identify the ultimate monetization attempt (sale or payout)"
+      - "Cross-reference all identified accounts against the watchlist of previously identified fraud actors"
+
+  step_3:
+    name: "Financial exposure assessment"
+    time_target: "concurrent with step 2"
+    actions:
+      - "Calculate total funds at risk: pending payouts, authorized but unsettled payments, platform balance in suspect accounts"
+      - "Calculate total funds already lost: completed payouts, settled transactions, withdrawn balance"
+      - "Identify all legitimate users potentially affected: buyers who purchased from compromised/fraudulent accounts, victims of ATO"
+      - "Assess chargeback exposure: total value of transactions likely to be disputed"
+      - "Determine regulatory reporting obligations: does the aggregate value or pattern trigger SAR filing requirements"
+
+  step_4:
+    name: "Evidence preservation"
+    time_target: "concurrent with steps 2-3"
+    actions:
+      - "Export complete transaction history for all identified accounts"
+      - "Preserve session logs, authentication events, and IP/device data"
+      - "Screenshot relevant account states, listing details, and payout configurations"
+      - "If law enforcement involvement is anticipated, ensure evidence chain of custody is documented"
+
+containment_steps:
+  immediate_containment:
+    name: "Stop fund outflow"
+    time_target: "Execute within 10 minutes of critical classification"
+    actions:
+      - "Freeze all pending payouts for identified accounts"
+      - "Place authorization holds on pending card charges (prevent settlement)"
+      - "Suspend selling and payout privileges for all accounts in the identified network"
+      - "For ATO: lock the compromised account, revoke all active sessions, and disable the attacker-added payout method"
+      - "For fraud rings: freeze all accounts in the cluster simultaneously to prevent warning and fund flight"
+      - "For laundering: freeze the current holder account and all accounts in the transfer chain"
+
+  extended_containment:
+    name: "Prevent expansion and recurrence"
+    time_target: "Execute within 2 hours"
+    actions:
+      - "Block device fingerprints and IP ranges associated with the network from all platform functions"
+      - "Flag all payment methods (card numbers, bank accounts) used by the network and block them from future use"
+      - "Monitor for new account creation matching the blocked infrastructure signals"
+      - "If stolen cards were used: notify payment processor to initiate card block and issuer notification"
+      - "If promotional credits were exploited: calculate credit-funded fraud exposure and adjust promotional program controls"
+      - "Apply enhanced monitoring to the specific item categories and price ranges targeted by the scheme"
+
+remediation_steps:
+  - name: "Fund recovery"
+    actions:
+      - "Initiate payout reversal for any payouts still within the ACH reversal window (typically 5 business days)"
+      - "File representment on chargebacks where the platform can demonstrate the transaction was fraudulent (shifting liability to the issuing bank)"
+      - "Calculate net loss after recovery attempts"
+
+  - name: "Victim remediation"
+    actions:
+      - "For ATO victims: restore account access, reverse unauthorized transactions, restore inventory, credit any lost balance"
+      - "For buyers who purchased from fraudulent sellers: initiate refund, return facilitation, or platform credit"
+      - "For legitimate sellers affected by false positive holds: release payout with priority processing and apology communication"
+
+  - name: "Enforcement"
+    actions:
+      - "Permanently ban all confirmed fraud accounts"
+      - "File law enforcement referral if loss exceeds $25,000 or involves 50+ victims"
+      - "File SAR if transfer patterns meet regulatory reporting criteria"
+      - "Report stolen card numbers to payment processor fraud database"
+
+communication_requirements:
+  internal:
+    - audience: "Fraud operations team"
+      channel: "#fraud-ops"
+      timing: "Immediate"
+      content: "Incident summary, severity, account list, exposure estimate"
+
+    - audience: "Payment processing team"
+      channel: "#payments-risk"
+      timing: "Within 30 minutes for critical"
+      content: "Payout freeze requests, card block requests, chargeback exposure estimate"
+
+    - audience: "Executive leadership"
+      channel: "Email to VP + Slack DM"
+      timing: "Within 2 hours for critical; within 24 hours for high"
+      content: "Financial exposure summary, containment status, estimated net loss, regulatory implications"
+
+    - audience: "Compliance/Legal"
+      channel: "Email to compliance officer"
+      timing: "Within 4 hours if SAR filing is indicated; within 24 hours for law enforcement referral"
+      content: "Pattern description, aggregate values, accounts involved, evidence summary"
+
+  external:
+    - audience: "ATO victims"
+      channel: "Verified email + in-app notification"
+      timing: "Immediately upon account recovery"
+      content: "What happened, how the account was secured, what was recovered, how to complete recovery"
+
+    - audience: "Affected buyers"
+      channel: "Email + in-app notification"
+      timing: "Within 24 hours"
+      content: "Transaction reversal, refund timeline, apology"
+
+    - audience: "Payment processor"
+      channel: "Processor fraud reporting channel"
+      timing: "Within 24 hours"
+      content: "Stolen card numbers, fraudulent transaction IDs, chargeback disposition recommendations"
+
+exit_criteria:
+  - "All pending payouts to suspect accounts are frozen or reversed"
+  - "All accounts in the network are suspended or banned"
+  - "All affected legitimate users have been notified and offered remediation"
+  - "Financial exposure is fully calculated and reported to leadership"
+  - "SAR filing decision has been made and documented"
+  - "Law enforcement referral has been filed if criteria met"
+  - "Post-incident review is scheduled within 5 business days"
+  - "Control tuning recommendations are documented"
+
+post_incident:
+  - "Conduct post-incident review within 5 business days"
+  - "Calculate final net loss after all recovery attempts complete"
+  - "Update intel cards with new TTPs and indicators"
+  - "Tune CTRL-CATCHBACK-001 and CTRL-CATCHBACK-002 based on what the models caught and missed"
+  - "Evaluate whether the fraud pattern exploited a gap in payout policy, promotional program, or trade feature controls"
+  - "File postmortem with timeline, financial impact, response effectiveness, and improvement actions"
+
+related_controls:
+  - "controls/risk-based-authentication.yaml"
+  - "controls/transaction-risk-scoring.yaml"
+
+related_metrics:
+  - metric: "mean_time_to_freeze"
+    description: "Median time from incident declaration to all suspect payouts frozen"
+    target: "<15 minutes for critical"
+
+  - metric: "fund_recovery_rate"
+    description: "Percentage of fraud-exposed funds recovered through payout reversal, representment, or account balance freeze"
+    target: ">60%"
+
+  - metric: "victim_remediation_time"
+    description: "Median time from incident to victim notification and remediation offer"
+    target: "<24 hours"
+
+  - metric: "false_freeze_rate"
+    description: "Percentage of payout freezes that are reversed because the underlying transaction was legitimate"
+    target: "<8%"
+
+  - metric: "regulatory_compliance_rate"
+    description: "Percentage of reportable incidents where SAR filing decision was made within required timeframe"
+    target: "100%"

@@ -1,0 +1,197 @@
+id: INTEL-CATCHBACK-001
+title: "Account Takeover for Asset Liquidation and Cash-Out"
+
+summary: >
+  Attackers compromise user accounts through credential stuffing, phishing,
+  or session hijacking, then rapidly liquidate the victim's inventory by
+  listing items at below-market prices, selling stored balance or credits,
+  and initiating payout to an attacker-controlled bank account or instant
+  pay destination. The entire attack chain, from initial access to funds
+  leaving the platform, can complete in under 60 minutes. Accounts with
+  stored platform balance, linked payout methods, and high-value inventory
+  are specifically targeted. Publicly visible collection values and
+  transaction history are used for reconnaissance to identify high-yield
+  targets.
+
+date_first_seen: "2024-03-18"
+date_last_updated: "2025-04-05"
+
+status: active
+
+intelligence_type: threat_pattern
+
+severity: critical
+
+threat_categories:
+  - account_takeover
+  - credential_stuffing
+  - session_hijacking
+  - financial_theft
+  - payout_abuse
+
+source_ids:
+  - "SRC-INT-001: Internal fraud operations case log"
+  - "SRC-INT-002: Authentication anomaly detection system"
+  - "SRC-EXT-001: Credential breach correlation service"
+  - "SRC-EXT-002: Industry peer intelligence sharing (confidential)"
+
+source_confidence: high
+
+internal_relevance: >
+  Directly impacts platform revenue (fraud losses from reversed
+  transactions and unrecoverable payouts), user trust (victims lose
+  inventory and funds), and regulatory standing (payment processing
+  obligations require demonstrable ATO prevention). Average loss per
+  successful ATO cash-out is estimated at $2,800. Monthly ATO attempts
+  against high-value accounts average 400-600, with a 2.1% success rate
+  against accounts without MFA.
+
+affected_surfaces:
+  - authentication:
+      description: "Login endpoint targeted by credential stuffing; session tokens targeted by malware and phishing"
+      risk: "Primary entry point for attackers"
+  - account_settings:
+      description: "Payout method changed to attacker-controlled destination; email and phone updated to lock out victim"
+      risk: "Enables fund extraction and blocks account recovery"
+  - listing_creation:
+      description: "Victim's inventory listed at 30-50% below market for rapid sale"
+      risk: "Inventory loss for victim; items sell to innocent buyers complicating recovery"
+  - payout_system:
+      description: "Payout initiated to newly added bank account or instant pay method"
+      risk: "Funds leave the platform irreversibly within minutes on instant pay"
+  - stored_balance:
+      description: "Platform credits or stored balance transferred or spent before victim regains access"
+      risk: "Direct financial loss"
+  - messaging:
+      description: "Phishing messages sent to other users from the compromised account to expand the attack"
+      risk: "Trusted account used as phishing vector"
+
+tactics:
+  - name: "Targeted credential stuffing"
+    description: >
+      Breached credential databases tested against accounts pre-identified
+      as high-value through public profile data (collection value, transaction
+      history, seller ratings). Residential proxies used to evade IP-based
+      rate limiting. Attempts throttled to 10-20 per IP per hour to stay
+      below velocity detection thresholds.
+
+  - name: "Session token theft"
+    description: >
+      Infostealer malware (Raccoon, RedLine, Vidar families) harvests browser
+      session cookies from victim devices. Stolen sessions are replayed from
+      the attacker's infrastructure, bypassing password and MFA checks entirely
+      because the session is already authenticated.
+
+  - name: "Payout method swap and instant withdrawal"
+    description: >
+      Within minutes of gaining access, the attacker adds a new payout method
+      (prepaid debit card, cash app, or bank account) and initiates payout of
+      any stored balance. If the platform supports instant payout, funds are
+      irrecoverable within minutes. If standard payout (2-3 day ACH), the
+      window for intervention is slightly longer but still narrow.
+
+  - name: "Fire sale liquidation"
+    description: >
+      High-value inventory is listed at 30-50% below market. At these prices,
+      items sell within minutes to legitimate bargain hunters. The attacker
+      then initiates payout of the sale proceeds before the victim detects
+      the compromise or the platform intervenes.
+
+  - name: "Account lockout escalation"
+    description: >
+      Email, phone number, and password are changed immediately after access
+      to prevent the victim from recovering the account through self-service
+      flows. Some attackers also enable MFA under their control, making
+      recovery require human support intervention which adds hours to the
+      recovery timeline.
+
+indicators:
+  - "Login from new device/IP followed by payout method change within 15 minutes"
+  - "Payout method added and payout initiated in the same session"
+  - "Bulk listing creation (5+ items in 30 minutes) at prices >30% below recent market"
+  - "Account settings changes (email + phone + password) within a single session"
+  - "Session originating from a known residential proxy service or VPN with previously flagged sessions"
+  - "Login at unusual time for the account's established pattern (e.g., 3 AM local time for a user who historically logs in 9 AM-11 PM)"
+  - "Stored balance transfer or spend-down to zero within 1 hour of login from new device"
+
+recommended_actions:
+  - action: "Deploy risk-based authentication with step-up challenges"
+    priority: critical
+    description: >
+      Challenge logins that exhibit risk signals (new device, unusual location,
+      residential proxy, credential breach correlation) with MFA, email
+      confirmation, or identity verification before granting full account access.
+    control_ref: "controls/risk-based-authentication.yaml"
+
+  - action: "Implement payout hold for new payout methods"
+    priority: critical
+    description: >
+      When a new payout method is added, apply a 48-hour hold on payouts to
+      that method. This breaks the ATO cash-out timeline without affecting
+      sellers who maintain a stable payout method.
+
+  - action: "Deploy transaction risk scoring on listings from recently-accessed accounts"
+    priority: high
+    description: >
+      Flag listings created within 60 minutes of a session that triggered
+      any authentication risk signal. Apply enhanced scrutiny to below-market
+      pricing from these sessions.
+    control_ref: "controls/transaction-risk-scoring.yaml"
+
+  - action: "Proactive breach credential monitoring"
+    priority: high
+    description: >
+      Monitor breach databases for credentials matching platform accounts.
+      Force password reset and notify user before attackers can test the
+      credentials.
+
+  - action: "Reduce instant payout eligibility"
+    priority: medium
+    description: >
+      Restrict instant payout to accounts with verified identity, established
+      payout history (90+ days on the same method), and MFA enabled. New
+      payout methods should default to standard (2-3 day) payout.
+
+owner: "Security Engineering Lead"
+
+related_controls:
+  - "controls/risk-based-authentication.yaml"
+  - "controls/transaction-risk-scoring.yaml"
+
+related_runbooks:
+  - "runbooks/financial-abuse-response.yaml"
+
+related_metrics:
+  - metric: "ato_success_rate"
+    description: "Percentage of ATO attempts that result in successful account access"
+    current: "2.1% (accounts without MFA); 0.03% (accounts with MFA)"
+    target: "<1% overall"
+  - metric: "ato_cash_out_prevention_rate"
+    description: "Percentage of successful ATOs where cash-out is prevented before funds leave the platform"
+    current: "58%"
+    target: ">80%"
+  - metric: "mean_time_to_detect_ato"
+    description: "Median time from account compromise to platform detection"
+    current: "47 minutes"
+    target: "<15 minutes"
+  - metric: "average_loss_per_ato"
+    description: "Average financial loss per successful ATO cash-out"
+    current: "$2,800"
+    target: "<$1,000"
+  - metric: "mfa_adoption_rate"
+    description: "Percentage of accounts with stored balance > $100 that have MFA enabled"
+    current: "31%"
+    target: ">60%"
+
+notes: >
+  The instant payout feature is the critical enabler of ATO cash-out. Without
+  instant payout, the platform has a 2-3 day window to detect the compromise
+  and freeze funds. With instant payout, the window collapses to minutes.
+  Every ATO prevention control should be evaluated against the question:
+  "Does this give us enough time to detect and freeze before funds leave?"
+
+  Session token theft via infostealers is an emerging vector that bypasses
+  all credential-based defenses including MFA. The only effective mitigation
+  is session binding (tying the session to the original device fingerprint
+  and IP range) and continuous session risk evaluation. This is a gap in the
+  current control set.

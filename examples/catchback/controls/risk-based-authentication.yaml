@@ -1,0 +1,154 @@
+id: CTRL-CATCHBACK-001
+name: "Risk-Based Authentication"
+
+control_family: identity_and_access
+
+objective: >
+  Apply adaptive authentication friction proportional to the risk of
+  each login attempt, preventing account takeover while minimizing
+  disruption to legitimate users. High-risk sessions receive step-up
+  challenges (MFA, email verification, identity confirmation) before
+  gaining access to sensitive account functions. Low-risk sessions
+  proceed normally.
+
+description: >
+  The Risk-Based Authentication (RBA) system evaluates every login
+  attempt and active session against a real-time risk model. At login,
+  the model scores the attempt using device reputation, geolocation
+  consistency, credential breach correlation, and behavioral biometrics.
+  During an active session, the model continuously monitors for anomalies
+  that may indicate session hijacking (device fingerprint change, IP
+  shift, behavioral discontinuity).
+
+  Sessions are classified into three risk tiers. Low-risk sessions
+  (matching known device, normal location, no breach correlation)
+  proceed without additional friction. Medium-risk sessions (new device,
+  unusual time, or moderate anomaly signals) receive a step-up challenge
+  before accessing sensitive functions (payout, settings changes, bulk
+  listing). High-risk sessions (credential breach match, impossible
+  travel, known proxy, or session anomaly) are blocked or require full
+  re-authentication with identity verification.
+
+  The system is designed to be invisible to legitimate users in the
+  common case (80%+ of logins are low-risk) while creating strong
+  barriers for attackers in the uncommon case.
+
+covered_threat_categories:
+  - account_takeover
+  - credential_stuffing
+  - session_hijacking
+  - phishing
+  - brute_force
+
+covered_surfaces:
+  - authentication
+  - account_settings
+  - payout_system
+  - session_management
+
+input_signals:
+  login_risk_signals:
+    weight: 0.40
+    signals:
+      - name: "Device reputation"
+        description: "Whether the device has been seen before on this account or any account. Known devices score low risk. New devices score higher. Devices associated with previous fraud score highest."
+
+      - name: "Geolocation consistency"
+        description: "Login location compared to the account's historical pattern. Same city = low risk. Same country but new city = medium. Different country = high. Impossible travel (two logins in different countries within physically impossible timeframes) = critical."
+
+      - name: "Credential breach correlation"
+        description: "Whether the account's email/username appears in known breach databases. Positive match increases risk even if the password has been changed, since credential reuse across services is common."
+
+      - name: "Login velocity"
+        description: "Number of failed login attempts preceding the successful login. 3+ failures followed by success from a different IP suggests credential testing."
+
+      - name: "Time of access"
+        description: "Login at a time significantly outside the account's established pattern. Not dispositive alone but contributes to composite risk."
+
+  session_risk_signals:
+    weight: 0.35
+    signals:
+      - name: "Device fingerprint continuity"
+        description: "Whether the device fingerprint remains consistent throughout the session. A change mid-session indicates potential session token theft and replay."
+
+      - name: "IP stability"
+        description: "Whether the session IP remains stable or shifts to a different network. Mobile users legitimately switch between WiFi and cellular, but jumps to unrelated IP ranges are suspicious."
+
+      - name: "Behavioral biometrics"
+        description: "Mouse movement, typing cadence, and navigation patterns compared to the account's baseline. Significant deviation may indicate a different person operating the account."
+
+      - name: "Action velocity"
+        description: "Rate of sensitive actions within the session. Payout method change + bulk listing + payout request in rapid succession is a strong ATO indicator."
+
+  contextual_signals:
+    weight: 0.25
+    signals:
+      - name: "Account value tier"
+        description: "Accounts with higher stored balance or collection value receive tighter risk thresholds. A suspicious login on a $50 account is less urgent than on a $5,000 account."
+
+      - name: "Recent security events"
+        description: "Whether the account has had recent password resets, MFA changes, or customer support interactions about security. Recent security activity combined with a new login increases risk."
+
+      - name: "Platform threat level"
+        description: "Whether the platform is currently experiencing elevated ATO attempts. During active credential stuffing campaigns, all risk thresholds tighten."
+
+enforcement_points:
+  - threshold: "session_risk < 0.3"
+    action: "No additional friction. Session proceeds normally."
+    label: "Low risk"
+
+  - threshold: "session_risk >= 0.3 AND session_risk < 0.6"
+    action: "Step-up challenge required before sensitive actions (payout, settings changes, listing high-value items). Challenge type: MFA code, email confirmation, or push notification."
+    label: "Medium risk"
+
+  - threshold: "session_risk >= 0.6 AND session_risk < 0.85"
+    action: "Full re-authentication required. Existing session paused. User must re-enter password and complete MFA. Sensitive actions blocked until re-authentication completes."
+    label: "High risk"
+
+  - threshold: "session_risk >= 0.85"
+    action: "Session terminated. Account temporarily locked. User must complete identity verification (email + MFA + security questions or ID verification) to regain access. Incident alert generated for fraud operations."
+    label: "Critical risk — suspected compromise"
+
+owner: "Security Engineering"
+
+maturity: operational
+
+status: active
+
+tuning_history:
+  - date: "2024-04-10"
+    change: "Initial deployment with device and geolocation signals only"
+  - date: "2024-07-15"
+    change: "Added credential breach correlation after major third-party breach exposed 2M+ credentials overlapping with platform accounts"
+  - date: "2024-10-22"
+    change: "Added session continuity monitoring (device fingerprint and IP stability) after detecting session token theft via infostealers"
+  - date: "2025-01-18"
+    change: "Added account value tier weighting to apply tighter thresholds on high-value accounts"
+  - date: "2025-03-10"
+    change: "Reduced medium-risk threshold from 0.4 to 0.3 after analysis showed 18% of ATO cash-outs occurred in sessions scored 0.3-0.4"
+
+related_metrics:
+  - metric: "step_up_challenge_rate"
+    description: "Percentage of logins that receive a step-up challenge"
+    current_value: "8.3%"
+    target: "<12% (minimize friction for legitimate users)"
+
+  - metric: "ato_prevention_rate"
+    description: "Percentage of ATO attempts blocked by RBA before account access"
+    current_value: "76%"
+    target: ">85%"
+
+  - metric: "false_challenge_rate"
+    description: "Percentage of step-up challenges triggered on legitimate users (measured by challenge completion rate)"
+    current_value: "91% completion (9% estimated false challenge)"
+    target: "<10% false challenge"
+
+  - metric: "session_termination_rate"
+    description: "Percentage of sessions terminated due to critical risk score"
+    current_value: "0.12%"
+    target: "<0.2%"
+
+  - metric: "mean_time_to_lock_compromised_session"
+    description: "Median time from session anomaly detection to session termination"
+    current_value: "3.2 minutes"
+    target: "<5 minutes"
